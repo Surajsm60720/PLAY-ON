@@ -27,7 +27,7 @@ function App() {
           <img src={reactLogo} className="logo react" alt="React logo" />
         </a>
       </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+      <p>Inspired from Taiga, this app aims to provide a simple and user-friendly interface for watching anime locally and updating them on AniList.</p>
 
       <form
         className="row"
