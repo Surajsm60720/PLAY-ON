@@ -1,5 +1,6 @@
 import CurvedLoop from "./components/CurvedLoop";
 import ClickSpark from "./components/ClickSpark";
+import GridMotion from "./components/GridMotion";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
