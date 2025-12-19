@@ -2,12 +2,14 @@ import { ReactNode } from 'react';
 import Sidebar from './Sidebar';
 import PillNav from './PillNav';
 import Squares from './Squares';
+import Titlebar from './Titlebar';
 import logo from '/logo.svg';
 
 /**
  * Layout Component - Discord-style layout with animated background
  * 
  * Structure:
+ * - Custom titlebar
  * - Animated Squares background
  * - Left sidebar (240px) with navigation and profile
  * - Main content area with PillNav at top
@@ -27,6 +29,9 @@ function Layout({ children }: LayoutProps) {
             position: 'relative',
             overflow: 'hidden',
         }}>
+            {/* Custom Titlebar */}
+            <Titlebar />
+
             {/* Animated Background */}
             <div style={{
                 position: 'fixed',
@@ -46,7 +51,7 @@ function Layout({ children }: LayoutProps) {
             </div>
 
             {/* Sidebar */}
-            <div style={{ position: 'relative', zIndex: 10 }}>
+            <div style={{ position: 'relative', zIndex: 10, marginTop: '32px' }}>
                 <Sidebar />
             </div>
 
@@ -88,6 +93,7 @@ function Layout({ children }: LayoutProps) {
                     flex: 1,
                     padding: '2rem',
                     paddingTop: '5rem',
+                    marginTop: '32px',
                 }}>
                     {children}
                 </div>
