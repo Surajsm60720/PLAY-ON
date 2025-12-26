@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Card, StatCard, SectionHeader } from '../components/ui/UIComponents';
-import BounceCards from '../components/ui/BounceCards';
 import { useFavoriteAnime } from '../hooks/useFavoriteAnime';
 
 function Home() {
@@ -11,13 +10,6 @@ function Home() {
     // Fetch REAL favorites from AniList instead of placeholders
     const { coverImages, loading: animeLoading } = useFavoriteAnime();
 
-    const transformStyles = [
-        "rotate(5deg) translate(-150px)",
-        "rotate(0deg) translate(-70px)",
-        "rotate(-5deg)",
-        "rotate(5deg) translate(70px)",
-        "rotate(-5deg) translate(150px)"
-    ];
 
     useEffect(() => {
         const fetchMediaWindow = async () => {
@@ -60,32 +52,21 @@ function Home() {
                     <StatCard icon="⏸️" label="On Hold" value={4} color="#FFE5B4" />
                 </div>
 
-                {/* BounceCards Section */}
-                <div style={{
-                    marginBottom: '2rem',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    minHeight: '250px',
-                }}>
+                {/* Simple 2D Anime List */}
+                <div className="mb-8 flex justify-center items-center gap-4 overflow-x-auto py-4">
                     {animeLoading ? (
-                        <p style={{ color: '#9CA3AF' }}>Loading anime covers...</p>
+                        <p className="text-gray-400">Loading anime covers...</p>
                     ) : coverImages.length > 0 ? (
-                        <BounceCards
-                            className="custom-bounceCards"
-                            images={coverImages}
-                            containerWidth={500}
-                            containerHeight={250}
-                            animationDelay={1}
-                            animationStagger={0.08}
-                            easeType="elastic.out(1, 0.5)"
-                            transformStyles={transformStyles}
-                            enableHover={true}
-                        />
+                        coverImages.map((img, idx) => (
+                            <div
+                                key={idx}
+                                className="w-32 h-48 flex-shrink-0 rounded-lg overflow-hidden border-2 border-white/10 shadow-sm"
+                            >
+                                <img src={img} alt="Anime Cover" className="w-full h-full object-cover" />
+                            </div>
+                        ))
                     ) : (
-                        <p style={{ color: '#9CA3AF' }}>
-                            Loading anime covers...
-                        </p>
+                        <p className="text-gray-400">No favorites found.</p>
                     )}
                 </div>
 

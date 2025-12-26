@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
+import { useLocalMedia } from '../../context/LocalMediaContext';
 import SidebarItem from './SidebarItem';
-import { ListIcon, HistoryIcon, StatsIcon, HomeIcon } from '../ui/Icons';
+import { ListIcon, HistoryIcon, HomeIcon } from '../ui/Icons';
+import UserProfileDialog from '../ui/UserProfileDialog';
 
 interface SidebarNavItem {
     label: string;
@@ -11,19 +13,24 @@ interface SidebarNavItem {
     icon: React.ReactNode;
 }
 
-function Sidebar() {
+interface SidebarProps {
+    width: number;
+}
+
+function Sidebar({ width }: SidebarProps) {
     const navigate = useNavigate();
     const location = useLocation();
     const [showProfileModal, setShowProfileModal] = useState(false);
 
     // Fetch public user data from global context
     const { user, loading, error, isAuthenticated } = useAuth();
+    // Fetch local folder data
+    const { folders: localItems, addFolder } = useLocalMedia();
 
-    const sidebarItems: SidebarNavItem[] = [
+    const mainItems: SidebarNavItem[] = [
         { label: 'Home', path: '/home', icon: <HomeIcon /> },
         { label: 'Media List', path: '/anime-list', icon: <ListIcon /> },
         { label: 'History', path: '/history', icon: <HistoryIcon /> },
-        { label: 'Statistics', path: '/statistics', icon: <StatsIcon /> },
     ];
 
     const handleNavClick = (path: string) => {
@@ -32,9 +39,9 @@ function Sidebar() {
 
     return (
         <div style={{
-            width: '240px',
+            width: `${width}px`,
             height: '100vh',
-            background: '#2B2D31',
+            background: 'transparent', // Match shell area (transparent to show background)
             display: 'flex',
             flexDirection: 'column',
             position: 'fixed',
@@ -43,74 +50,97 @@ function Sidebar() {
             zIndex: 100,
             paddingTop: '32px', // Space for transparent titlebar
         }}>
-            {/* App Logo/Title */}
-            <div style={{
-                padding: '1rem 1rem 0.5rem 1rem',
-                borderBottom: '2px solid #1E1F22',
-            }}>
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.75rem',
-                }}>
-                    <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '12px',
-                        background: colors.pastelPurple,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1.5rem',
-                    }}>
-                        🎬
-                    </div>
-                    <div>
-                        <div style={{
-                            fontSize: '1.1rem',
-                            fontWeight: '700',
-                            color: '#FFFFFF',
-                        }}>
-                            PLAY-ON!
-                        </div>
-                        <div style={{
-                            fontSize: '0.75rem',
-                            color: '#B5BAC1',
-                        }}>
-                            Media Tracker
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             {/* Navigation Items */}
             <div style={{
                 flex: 1,
                 padding: '1rem 0.5rem',
                 overflowY: 'auto',
             }}>
-                {sidebarItems.map((item) => {
-                    const isActive = location.pathname === item.path ||
-                        (item.path === '/anime-list' && location.pathname.startsWith('/anime/'));
+                {/* Main Group */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                    {mainItems.map((item) => {
+                        const isActive = location.pathname === item.path ||
+                            (item.path === '/anime-list' && location.pathname.startsWith('/anime/'));
 
-                    return (
-                        <SidebarItem
+                        return (
+                            <SidebarItem
+                                key={item.path}
+                                label={item.label}
+                                icon={item.icon}
+                                isActive={isActive}
+                                onClick={() => handleNavClick(item.path)}
+                            />
+                        );
+                    })}
+                </div>
+
+                {/* Local Group */}
+                <div>
+                    <div style={{
+                        padding: '0 0.75rem',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        color: '#6B6F76',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}>
+                        <span>Local</span>
+                        <div style={{ flex: 1, height: '1px', background: '#313338' }}></div>
+                    </div>
+
+                    {localItems.map((item) => (
+                        <div
                             key={item.path}
-                            label={item.label}
-                            icon={item.icon}
-                            isActive={isActive}
-                            onClick={() => handleNavClick(item.path)}
-                        />
-                    );
-                })}
+                            onClick={() => handleNavClick(`/local/${encodeURIComponent(item.path)}`)}
+                            style={{
+                                padding: '0.5rem 0.75rem',
+                                borderRadius: '4px',
+                                color: '#949BA4',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                transition: 'all 0.2s',
+                                marginLeft: '0.5rem'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#FFFFFF'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = '#949BA4'}
+                        >
+                            📁 {item.label}
+                        </div>
+                    ))}
+
+                    {/* Add Folder Button */}
+                    <div
+                        onClick={addFolder}
+                        style={{
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '4px',
+                            color: colors.pastelPink, // Accent color
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            transition: 'all 0.2s',
+                            marginLeft: '0.5rem',
+                            marginTop: '0.25rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                    >
+                        + Add folder
+                    </div>
+                </div>
             </div>
 
             {/* Profile Section */}
             <div style={{
                 padding: '0.75rem',
-                borderTop: '2px solid #1E1F22',
-                background: '#232428',
+                borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                background: 'transparent',
             }}>
                 <div style={{
                     display: 'flex',
@@ -204,94 +234,14 @@ function Sidebar() {
                 </div>
             </div>
 
-            {/* Profile Modal */}
-            {showProfileModal && (
-                <div style={{
-                    position: 'fixed',
-                    left: '250px',
-                    bottom: '20px',
-                    width: '300px',
-                    background: '#1E1F22',
-                    borderRadius: '12px',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                    padding: '1.5rem',
-                    zIndex: 1000,
-                    border: '1px solid #313338',
-                }}>
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '1rem',
-                    }}>
-                        <h3 style={{ color: '#FFFFFF', margin: 0, fontSize: '1.1rem' }}>User Profile</h3>
-                        <button
-                            onClick={() => setShowProfileModal(false)}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#B5BAC1',
-                                cursor: 'pointer',
-                                fontSize: '1.2rem'
-                            }}
-                        >×</button>
-                    </div>
+            {/* User Profile Dialog */}
+            <UserProfileDialog
+                isOpen={showProfileModal}
+                onClose={() => setShowProfileModal(false)}
+                user={user}
+                isAuthenticated={isAuthenticated}
+            />
 
-                    <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                        <div style={{
-                            width: '80px',
-                            height: '80px',
-                            borderRadius: '50%',
-                            background: colors.pastelPink,
-                            margin: '0 auto 1rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '2.5rem',
-                            overflow: 'hidden',
-                        }}>
-                            {!isAuthenticated || !user?.avatar?.large ? '👤' : (
-                                <img src={user.avatar.large} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            )}
-                        </div>
-                        <div style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '1.2rem' }}>
-                            {user?.name || 'Guest User'}
-                        </div>
-                        <div style={{ color: '#B5BAC1', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                            {isAuthenticated ? 'AniList Member' : 'Guest'}
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gap: '0.75rem' }}>
-                        <button
-                            onClick={() => setShowProfileModal(false)}
-                            style={{
-                                padding: '0.75rem',
-                                background: colors.pastelPurple,
-                                color: '#FFFFFF',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            Close
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* CSS Animation for loading state */}
-            <style>{`
-                @keyframes pulse {
-                    0% {
-                        background-position: 200% 0;
-                    }
-                    100% {
-                        background-position: -200% 0;
-                    }
-                }
-            `}</style>
         </div>
     );
 }

@@ -1,75 +1,121 @@
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/sidebar/Sidebar';
-import Squares from '../components/ui/Squares';
 import Titlebar from '../components/titlebar/Titlebar';
+import TabNavigation from '../components/ui/TabNavigation';
 
 /**
  * MainLayout Component
  * 
  * Provides the persistent shell for the application.
- * - Sidebar stays mounted.
- * - Titlebar stays mounted.
- * - Background stays mounted.
- * - Main content changes via <Outlet />.
  */
 function MainLayout() {
+    const [sidebarWidth, setSidebarWidth] = useState(200);
+    const [isResizing, setIsResizing] = useState(false);
+
+    const handleBack = () => {
+        window.history.back();
+    };
+
+    const handleForward = () => {
+        window.history.forward();
+    };
+
+    const startResizing = useCallback(() => {
+        setIsResizing(true);
+    }, []);
+
+    const stopResizing = useCallback(() => {
+        setIsResizing(false);
+    }, []);
+
+    const resize = useCallback((mouseMoveEvent: MouseEvent) => {
+        if (isResizing) {
+            const newWidth = mouseMoveEvent.clientX;
+            if (newWidth >= 180 && newWidth <= 450) {
+                setSidebarWidth(newWidth);
+            }
+        }
+    }, [isResizing]);
+
+    useEffect(() => {
+        window.addEventListener("mousemove", resize);
+        window.addEventListener("mouseup", stopResizing);
+        return () => {
+            window.removeEventListener("mousemove", resize);
+            window.removeEventListener("mouseup", stopResizing);
+        };
+    }, [resize, stopResizing]);
 
     return (
         <div style={{
             display: 'flex',
             minHeight: '100vh',
-            background: '#0a0a0f',
+            background: '#1E1F22', // Shell Background
             position: 'relative',
             overflow: 'hidden',
+            userSelect: isResizing ? 'none' : 'auto',
         }}>
             {/* Custom Titlebar */}
             <Titlebar />
 
-            {/* Animated Background */}
-            <div style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                zIndex: 0,
-            }}>
-                <Squares
-                    speed={0.5}
-                    squareSize={40}
-                    direction='diagonal'
-                    borderColor='rgba(255, 181, 197, 0.15)'
-                    hoverFillColor='rgba(255, 181, 197, 0.05)'
-                />
-            </div>
 
             {/* Sidebar */}
             <div style={{ position: 'relative', zIndex: 10 }}>
-                <Sidebar />
+                <Sidebar width={sidebarWidth} />
+
+                {/* Resize Handle */}
+                <div
+                    onMouseDown={startResizing}
+                    style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 0,
+                        width: '4px',
+                        height: '100%',
+                        cursor: 'col-resize',
+                        zIndex: 100,
+                        transition: 'background 0.2s',
+                        background: isResizing ? 'rgba(244, 0, 53, 0.3)' : 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                        if (!isResizing) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                        if (!isResizing) e.currentTarget.style.background = 'transparent';
+                    }}
+                />
             </div>
 
-            {/* Main Content Area */}
+            {/* Main Content Area - Styled as a contained "Canvas" */}
             <div style={{
-                marginLeft: '240px',
+                marginLeft: `${sidebarWidth + 8}px`, // Dynamic margin
+                marginTop: '40px',   // Gap from Titlebar
+                marginRight: '8px',
+                marginBottom: '8px',
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                height: '100vh', // Fixed height for scrolling content
+                height: 'calc(100vh - 48px)', // Remaining height
                 position: 'relative',
                 zIndex: 1,
-                background: 'rgba(10, 10, 15, 0.5)', // Subtle overlay
-                borderTopLeftRadius: '20px', // Soft rounded corner
-                borderLeft: '1px solid rgba(255, 255, 255, 0.05)', // Soft divider
+                background: '#9f9f9fff', // Content Color
+                borderRadius: '16px', // Rounded separation
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                 overflow: 'hidden', // Contain scrolling
-                paddingTop: '32px', // Account for titlebar
             }}>
                 {/* Page Content Outlet */}
-                <div style={{
-                    flex: 1,
-                    padding: '2rem',
-                    overflowY: 'auto', // Scrollable content area
-                }}>
-                    <Outlet />
+                <div
+                    className="relative flex-1 flex flex-col overflow-hidden"
+                    style={{ background: '#2B2D31' }}
+                >
+                    {/* Custom Corner Tab Navigation */}
+                    <TabNavigation onBack={handleBack} onForward={handleForward} />
+
+                    {/* Scrollable Content Container */}
+                    <div className="flex-1 overflow-y-auto px-8 py-8 pt-24">
+                        <Outlet />
+                    </div>
                 </div>
             </div>
         </div>

@@ -23,7 +23,8 @@ export function useFavoriteAnime() {
                 const result = await fetchPublicUser(ANILIST_USERNAME);
 
                 if (result.data && result.data.User && result.data.User.favourites.anime.nodes) {
-                    const nodes = result.data.User.favourites.anime.nodes;
+                    // Limit to first 5 favorites as requested
+                    const nodes = result.data.User.favourites.anime.nodes.slice(0, 5);
                     setFavorites(nodes);
 
                     // Extract only the large cover images for the BounceCards

@@ -6,6 +6,8 @@ mod win_name;
 mod media_player;
 // Import the anilist module
 mod anilist;
+// Import file system module
+mod file_system;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -103,6 +105,7 @@ fn get_active_media_window() -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
@@ -112,7 +115,8 @@ pub fn run() {
             get_active_media_window,
             search_anime_command,
             get_anime_by_id_command,
-            match_anime_from_window_command
+            match_anime_from_window_command,
+            file_system::get_folder_contents
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,27 +1,17 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import colors from '../../styles/colors';
 
 /**
  * Custom Titlebar Component
  * 
- * Replaces the default OS titlebar with a custom one
- * Includes window controls (minimize, maximize, close)
+ * Replaces the default OS titlebar with a custom one.
+ * Includes project title and window controls with premium hover effects.
  */
-
 function Titlebar() {
     const appWindow = getCurrentWindow();
 
-    const handleMinimize = async () => {
-        await appWindow.minimize();
-    };
-
-    const handleMaximize = async () => {
-        await appWindow.toggleMaximize();
-    };
-
-    const handleClose = async () => {
-        await appWindow.close();
-    };
+    const handleMinimize = async () => { await appWindow.minimize(); };
+    const handleMaximize = async () => { await appWindow.toggleMaximize(); };
+    const handleClose = async () => { await appWindow.close(); };
 
     return (
         <div
@@ -30,9 +20,9 @@ function Titlebar() {
                 height: '32px',
                 background: 'transparent',
                 display: 'flex',
-                justifyContent: 'flex-end', // Only window controls on the right
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '0 0.5rem',
+                padding: '0 1rem',
                 userSelect: 'none',
                 position: 'fixed',
                 top: 0,
@@ -42,95 +32,127 @@ function Titlebar() {
                 WebkitAppRegion: 'drag',
             } as React.CSSProperties}
         >
-            {/* Window Controls */}
             <div style={{
                 display: 'flex',
-                gap: '2px',
+                alignItems: 'center',
+                gap: '0.5rem',
+                WebkitAppRegion: 'no-drag',
+            } as React.CSSProperties}>
+                <span style={{
+                    fontSize: '0.85rem',
+                    fontWeight: '800',
+                    color: '#FFFFFF',
+                    letterSpacing: '1px',
+                    textTransform: 'uppercase'
+                }}>
+                    PLAY-ON!
+                </span>
+            </div>
+
+            {/* Right Section: Window Controls */}
+            <div style={{
+                display: 'flex',
+                gap: '8px',
                 WebkitAppRegion: 'no-drag',
             } as React.CSSProperties}>
                 {/* Minimize */}
                 <button
                     onClick={handleMinimize}
+                    title="Minimize"
                     style={{
-                        width: '32px',
-                        height: '32px',
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
                         border: 'none',
-                        background: 'transparent',
-                        color: colors.mediumGray,
+                        background: '#fbb9dc',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '1rem',
-                        transition: 'all 0.2s ease',
+                        fontSize: '0px',
+                        padding: 0,
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}
                     onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                        e.currentTarget.style.color = colors.white;
+                        e.currentTarget.style.fontSize = '10px';
+                        e.currentTarget.textContent = '−';
+                        e.currentTarget.style.color = 'rgba(0,0,0,0.5)';
+                        e.currentTarget.style.boxShadow = '0 0 12px 2px rgba(219, 197, 243, 0.4)';
+                        e.currentTarget.style.transform = 'scale(1.1)';
                     }}
                     onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = colors.mediumGray;
+                        e.currentTarget.style.fontSize = '0px';
+                        e.currentTarget.textContent = '';
+                        e.currentTarget.style.boxShadow = 'none';
+                        e.currentTarget.style.transform = 'scale(1)';
                     }}
-                >
-                    −
-                </button>
+                />
 
                 {/* Maximize */}
                 <button
                     onClick={handleMaximize}
+                    title="Maximize"
                     style={{
-                        width: '32px',
-                        height: '32px',
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
                         border: 'none',
-                        background: 'transparent',
-                        color: colors.mediumGray,
+                        background: '#6a6a9e',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '0.9rem',
-                        transition: 'all 0.2s ease',
+                        fontSize: '0px',
+                        padding: 0,
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}
                     onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                        e.currentTarget.style.color = colors.white;
+                        e.currentTarget.style.fontSize = '8px';
+                        e.currentTarget.textContent = '◻';
+                        e.currentTarget.style.color = 'rgba(0,0,0,0.5)';
+                        e.currentTarget.style.boxShadow = '0 0 12px 2px rgba(133, 255, 161, 0.4)';
+                        e.currentTarget.style.transform = 'scale(1.1)';
                     }}
                     onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = colors.mediumGray;
+                        e.currentTarget.style.fontSize = '0px';
+                        e.currentTarget.textContent = '';
+                        e.currentTarget.style.boxShadow = 'none';
+                        e.currentTarget.style.transform = 'scale(1)';
                     }}
-                >
-                    ◻
-                </button>
+                />
 
                 {/* Close */}
                 <button
                     onClick={handleClose}
+                    title="Close"
                     style={{
-                        width: '32px',
-                        height: '32px',
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
                         border: 'none',
-                        background: 'transparent',
-                        color: colors.mediumGray,
+                        background: '#ff6991ff',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '1.2rem',
-                        transition: 'all 0.2s ease',
+                        fontSize: '0px',
+                        padding: 0,
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}
                     onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#E81123';
-                        e.currentTarget.style.color = colors.white;
+                        e.currentTarget.style.fontSize = '10px';
+                        e.currentTarget.textContent = '×';
+                        e.currentTarget.style.color = 'rgba(0,0,0,0.5)';
+                        e.currentTarget.style.boxShadow = '0 0 12px 2px rgba(255, 105, 105, 0.4)';
+                        e.currentTarget.style.transform = 'scale(1.1)';
                     }}
                     onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = colors.mediumGray;
+                        e.currentTarget.style.fontSize = '0px';
+                        e.currentTarget.textContent = '';
+                        e.currentTarget.style.boxShadow = 'none';
+                        e.currentTarget.style.transform = 'scale(1)';
                     }}
-                >
-                    ×
-                </button>
+                />
             </div>
         </div>
     );

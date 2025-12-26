@@ -9,6 +9,8 @@ import AnimeDetails from './pages/AnimeDetails';
 import CounterDemo from './pages/CounterDemo';
 import MainLayout from './layouts/MainLayout';
 import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
+import { LocalMediaProvider } from './context/LocalMediaContext';
+import LocalFolder from './pages/LocalFolder';
 import "./App.css";
 
 /**
@@ -160,24 +162,29 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Root route - checks if onboarding needed */}
-        <Route path="/" element={<ProtectedRoute />} />
+    <LocalMediaProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Root route - checks if onboarding needed */}
+          <Route path="/" element={<ProtectedRoute />} />
 
-        {/* Main App Layout */}
-        <Route element={<MainLayout />}>
-          <Route path="/home" element={<Home />} />
-          <Route path="/anime-list" element={<AnimeList />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/statistics" element={<Statistics />} />
+          {/* Main App Layout */}
+          <Route element={<MainLayout />}>
+            <Route path="/home" element={<Home />} />
+            <Route path="/anime-list" element={<AnimeList />} />
+            <Route path="/history" element={<History />} />
+            <Route path="/statistics" element={<Statistics />} />
 
-          {/* Dynamic route for anime details */}
-          <Route path="/anime/:id" element={<AnimeDetails />} />
-          <Route path="/counter-demo" element={<CounterDemo />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+            {/* Dynamic route for anime details */}
+            <Route path="/anime/:id" element={<AnimeDetails />} />
+            <Route path="/counter-demo" element={<CounterDemo />} />
+
+            {/* Local Folder Route */}
+            <Route path="/local/:folderPath" element={<LocalFolder />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </LocalMediaProvider>
   );
 }
 
