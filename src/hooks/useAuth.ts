@@ -1,33 +1,33 @@
 /**
- * Custom React Hook for Authentication
- * 
- * Manages authentication state and provides login/logout functionality
+ * Custom React Hook for AniList User Profile
  */
 
 import { useAuthContext } from '../context/AuthContext';
-import type { Viewer } from '../types/auth.types';
 
 interface UseAuthReturn {
-    /** Whether user is authenticated */
+    /** Whether user data is loaded */
     isAuthenticated: boolean;
-    /** Authenticated user's data */
-    user: Viewer | null;
+    /** Public user's data */
+    user: any;
     /** Loading state */
     loading: boolean;
     /** Error message */
     error: string | null;
-    /** Start OAuth login */
-    login: () => void;
-    /** Logout user */
-    logout: () => void;
 }
 
 /**
- * Hook for managing authentication state
- * Now consumes global AuthContext
+ * Hook for managing public AniList user state
+ * Consumes simplified AuthContext
  * 
- * @returns Authentication state and functions
+ * @returns Public user state
  */
 export function useAuth(): UseAuthReturn {
-    return useAuthContext();
+    const { isAuthenticated, user, loading, error } = useAuthContext();
+
+    return {
+        isAuthenticated,
+        user,
+        loading,
+        error
+    };
 }

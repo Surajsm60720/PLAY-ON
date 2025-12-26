@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import colors from '../../styles/colors';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
 import SidebarItem from './SidebarItem';
-import { ListIcon, HistoryIcon, StatsIcon } from '../ui/Icons';
+import { ListIcon, HistoryIcon, StatsIcon, HomeIcon } from '../ui/Icons';
 
 interface SidebarNavItem {
     label: string;
@@ -13,11 +14,13 @@ interface SidebarNavItem {
 function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
+    const [showProfileModal, setShowProfileModal] = useState(false);
 
-    // Fetch authenticated user data from global context
+    // Fetch public user data from global context
     const { user, loading, error, isAuthenticated } = useAuth();
 
     const sidebarItems: SidebarNavItem[] = [
+        { label: 'Home', path: '/home', icon: <HomeIcon /> },
         { label: 'Media List', path: '/anime-list', icon: <ListIcon /> },
         { label: 'History', path: '/history', icon: <HistoryIcon /> },
         { label: 'Statistics', path: '/statistics', icon: <StatsIcon /> },
@@ -118,6 +121,7 @@ function Sidebar() {
                     cursor: 'pointer',
                     transition: 'background 0.2s ease',
                 }}
+                    onClick={() => setShowProfileModal(true)}
                     onMouseEnter={(e) => {
                         e.currentTarget.style.background = '#35373C';
                     }}
@@ -140,7 +144,6 @@ function Sidebar() {
                         position: 'relative',
                     }}>
                         {loading ? (
-                            // Loading state: Show pulsing animation
                             <div style={{
                                 width: '100%',
                                 height: '100%',
@@ -149,21 +152,15 @@ function Sidebar() {
                                 animation: 'pulse 1.5s ease-in-out infinite',
                             }} />
                         ) : !isAuthenticated || error || !user?.avatar?.large ? (
-                            // Error state or no avatar: Show fallback emoji
                             '👤'
                         ) : (
-                            // Success state: Show AniList profile picture
                             <img
                                 src={user.avatar.large}
-                                alt={`${user.name}'s avatar`}
+                                alt={`${user?.name}'s avatar`}
                                 style={{
                                     width: '100%',
                                     height: '100%',
                                     objectFit: 'cover',
-                                }}
-                                onError={(e) => {
-                                    // Fallback if image fails to load
-                                    e.currentTarget.style.display = 'none';
                                 }}
                             />
                         )}
@@ -188,7 +185,7 @@ function Sidebar() {
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                         }}>
-                            {loading ? '...' : error ? 'Offline' : 'Local User'}
+                            {loading ? '...' : 'Public Profile'}
                         </div>
                     </div>
 
@@ -206,6 +203,83 @@ function Sidebar() {
                     </div>
                 </div>
             </div>
+
+            {/* Profile Modal */}
+            {showProfileModal && (
+                <div style={{
+                    position: 'fixed',
+                    left: '250px',
+                    bottom: '20px',
+                    width: '300px',
+                    background: '#1E1F22',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                    padding: '1.5rem',
+                    zIndex: 1000,
+                    border: '1px solid #313338',
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '1rem',
+                    }}>
+                        <h3 style={{ color: '#FFFFFF', margin: 0, fontSize: '1.1rem' }}>User Profile</h3>
+                        <button
+                            onClick={() => setShowProfileModal(false)}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#B5BAC1',
+                                cursor: 'pointer',
+                                fontSize: '1.2rem'
+                            }}
+                        >×</button>
+                    </div>
+
+                    <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                        <div style={{
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '50%',
+                            background: colors.pastelPink,
+                            margin: '0 auto 1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '2.5rem',
+                            overflow: 'hidden',
+                        }}>
+                            {!isAuthenticated || !user?.avatar?.large ? '👤' : (
+                                <img src={user.avatar.large} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            )}
+                        </div>
+                        <div style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '1.2rem' }}>
+                            {user?.name || 'Guest User'}
+                        </div>
+                        <div style={{ color: '#B5BAC1', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                            {isAuthenticated ? 'AniList Member' : 'Guest'}
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gap: '0.75rem' }}>
+                        <button
+                            onClick={() => setShowProfileModal(false)}
+                            style={{
+                                padding: '0.75rem',
+                                background: colors.pastelPurple,
+                                color: '#FFFFFF',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* CSS Animation for loading state */}
             <style>{`

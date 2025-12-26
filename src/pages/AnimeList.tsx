@@ -3,12 +3,12 @@ import { AnimeCard, SectionHeader } from '../components/ui/UIComponents';
 import CurrentlyWatching from '../components/ui/CurrentlyWatching';
 // Sample anime data with more details
 const animeData = [
-    { id: 1, title: 'Attack on Titan', episodes: 75, status: 'Watching', progress: 67, image: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_5_1766682347429.png' },
-    { id: 2, title: 'Demon Slayer', episodes: 44, status: 'Watching', progress: 82, image: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_1_1766681754438.png' },
-    { id: 3, title: 'My Hero Academia', episodes: 113, status: 'Watching', progress: 45, image: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_3_1766682294612.png' },
-    { id: 4, title: 'Jujutsu Kaisen', episodes: 24, status: 'Completed', progress: 100, image: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_2_1766682269853.png' },
-    { id: 5, title: 'One Piece', episodes: 1000, status: 'Watching', progress: 12, image: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_4_1766682324192.png' },
-    { id: 6, title: 'Naruto Shippuden', episodes: 500, status: 'Completed', progress: 100, image: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_1_1766681754438.png' },
+    { id: 1, title: 'Attack on Titan', episodes: 75, status: 'Watching', progress: 67, image: '/assets/anime/anime_mock_5_1766682347429.png' },
+    { id: 2, title: 'Demon Slayer', episodes: 44, status: 'Watching', progress: 82, image: '/assets/anime/anime_mock_1_1766681754438.png' },
+    { id: 3, title: 'My Hero Academia', episodes: 113, status: 'Watching', progress: 45, image: '/assets/anime/anime_mock_3_1766682294612.png' },
+    { id: 4, title: 'Jujutsu Kaisen', episodes: 24, status: 'Completed', progress: 100, image: '/assets/anime/anime_mock_2_1766682269853.png' },
+    { id: 5, title: 'One Piece', episodes: 1000, status: 'Watching', progress: 12, image: '/assets/anime/anime_mock_4_1766682324192.png' },
+    { id: 6, title: 'Naruto Shippuden', episodes: 500, status: 'Completed', progress: 100, image: '/assets/anime/anime_mock_1_1766681754438.png' },
     // ... rest can use defaults or recycled
     { id: 7, title: 'Death Note', episodes: 37, status: 'Completed', progress: 100 },
     { id: 8, title: 'Steins;Gate', episodes: 24, status: 'Watching', progress: 58 },

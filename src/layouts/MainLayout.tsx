@@ -1,9 +1,7 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/sidebar/Sidebar';
-import PillNav from '../components/ui/PillNav';
 import Squares from '../components/ui/Squares';
 import Titlebar from '../components/titlebar/Titlebar';
-import logo from '/logo.svg';
 
 /**
  * MainLayout Component
@@ -15,7 +13,6 @@ import logo from '/logo.svg';
  * - Main content changes via <Outlet />.
  */
 function MainLayout() {
-    const location = useLocation();
 
     return (
         <div style={{
@@ -64,32 +61,8 @@ function MainLayout() {
                 borderTopLeftRadius: '20px', // Soft rounded corner
                 borderLeft: '1px solid rgba(255, 255, 255, 0.05)', // Soft divider
                 overflow: 'hidden', // Contain scrolling
+                paddingTop: '32px', // Account for titlebar
             }}>
-                {/* PillNav */}
-                <div style={{
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 50,
-                    padding: '32px 2rem 0', // Account for titlebar + normal padding
-                }}>
-                    <PillNav
-                        logo={logo}
-                        logoAlt="PLAY-ON! Logo"
-                        items={[
-                            { label: 'Home', href: '/home' },
-                            { label: 'Seasons', href: '/seasons' },
-                            { label: 'Now Playing', href: '/now-playing' },
-                        ]}
-                        activeHref={location.pathname}
-                        ease="power3.easeOut"
-                        baseColor="#1a1a24"
-                        pillColor="#FFB5C5"
-                        hoveredPillTextColor="#0a0a0f"
-                        pillTextColor="#0a0a0f"
-                        initialLoadAnimation={false}
-                    />
-                </div>
-
                 {/* Page Content Outlet */}
                 <div style={{
                     flex: 1,

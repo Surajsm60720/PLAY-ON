@@ -61,7 +61,7 @@ function AnimeDetails() {
                     width: '100%',
                     height: '420px',
                     borderRadius: '16px',
-                    background: `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.4)), url('/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_5_1766682347429.png')`,
+                    background: `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.4)), url('/assets/anime/anime_mock_5_1766682347429.png')`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     display: 'flex',

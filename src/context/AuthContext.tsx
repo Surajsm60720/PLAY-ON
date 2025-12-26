@@ -1,73 +1,66 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-    isAuthenticated as checkAuth,
-    logout as performLogout,
-    initiateOAuth as startOAuth
-} from '../services/authService';
-import type { Viewer } from '../types/auth.types';
+import { fetchPublicUser } from '../api/anilistClient';
+
+// Use this username to fetch public data
+const ANILIST_USERNAME = 'MemestaVedas';
+
+interface UserProfile {
+    id: number;
+    name: string;
+    avatar: {
+        large: string;
+        medium: string;
+    };
+    bannerImage?: string;
+    favorites?: any;
+}
 
 interface AuthContextType {
     isAuthenticated: boolean;
-    user: Viewer | null;
+    user: UserProfile | null;
     loading: boolean;
     error: string | null;
-    login: () => void;
-    logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [user, setUser] = useState<Viewer | null>(null);
+    const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const initAuth = async () => {
+        /**
+         * Fetch public profile by username.
+         */
+        const loadProfile = async () => {
             try {
-                const authenticated = checkAuth();
-                setIsAuthenticated(authenticated);
+                setLoading(true);
+                const result = await fetchPublicUser(ANILIST_USERNAME);
 
-                if (authenticated) {
-                    // Mock user data for the generic shell
-                    setUser({
-                        id: 12345,
-                        name: 'MemestaVedas',
-                        avatar: {
-                            large: 'https://placehold.co/150x150/2563eb/FFF?text=K',
-                            medium: 'https://placehold.co/150x150/2563eb/FFF?text=K',
-                        }
-                    });
+                if (result.data && result.data.User) {
+                    // Success! Update our profile state with public data
+                    setUser(result.data.User);
+                    setError(null);
+                } else {
+                    throw new Error('User not found on AniList');
                 }
             } catch (err) {
-                console.error('Failed to initialize auth:', err);
-                setError('Failed to initialize authentication');
+                console.error('Failed to load profile:', err);
+                setError('Failed to fetch AniList profile');
             } finally {
                 setLoading(false);
             }
         };
 
-        initAuth();
+        loadProfile();
     }, []);
 
-    const login = () => {
-        startOAuth();
-    };
-
-    const logout = () => {
-        performLogout();
-        setIsAuthenticated(false);
-        setUser(null);
-    };
-
     const value = {
-        isAuthenticated,
+        isAuthenticated: !!user,
         user,
         loading,
-        error,
-        login,
-        logout
+        error
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

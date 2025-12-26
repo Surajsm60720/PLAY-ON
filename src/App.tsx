@@ -5,8 +5,6 @@ import Home from './pages/Home';
 import AnimeList from './pages/AnimeList';
 import History from './pages/History';
 import Statistics from './pages/Statistics';
-import Seasons from './pages/Seasons';
-import NowPlaying from './pages/NowPlaying';
 import AnimeDetails from './pages/AnimeDetails';
 import CounterDemo from './pages/CounterDemo';
 import MainLayout from './layouts/MainLayout';
@@ -173,8 +171,6 @@ function App() {
           <Route path="/anime-list" element={<AnimeList />} />
           <Route path="/history" element={<History />} />
           <Route path="/statistics" element={<Statistics />} />
-          <Route path="/seasons" element={<Seasons />} />
-          <Route path="/now-playing" element={<NowPlaying />} />
 
           {/* Dynamic route for anime details */}
           <Route path="/anime/:id" element={<AnimeDetails />} />

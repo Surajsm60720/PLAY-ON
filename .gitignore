@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 PROJECT_STRUCTURE.md
+anilist_integration_summary.md
 
 # Editor directories and files
 .vscode/*
