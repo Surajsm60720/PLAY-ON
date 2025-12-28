@@ -1,15 +1,55 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Card, StatCard, SectionHeader } from '../components/ui/UIComponents';
-import { useFavoriteAnime } from '../hooks/useFavoriteAnime';
 import TiltedCard from '../components/ui/TiltedCard';
+import { useAuth } from '../hooks/useAuth';
+import { fetchUserMediaList, fetchTrendingAnime } from '../api/anilistClient';
 
 function Home() {
     const [mediaWindow, setMediaWindow] = useState<string>('Loading...');
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch REAL favorites from AniList instead of placeholders
-    const { favorites, loading: animeLoading } = useFavoriteAnime();
+    // Anime List State
+    const [animeList, setAnimeList] = useState<any[]>([]);
+    const [animeLoading, setAnimeLoading] = useState(true);
+
+    const { user, isAuthenticated } = useAuth();
+
+    // Fetch Anime Data
+    useEffect(() => {
+        const loadAnime = async () => {
+            setAnimeLoading(true);
+            try {
+                if (isAuthenticated && user?.id) {
+                    // Fetch Currently Watching
+                    const data = await fetchUserMediaList(user.id, 'CURRENT');
+                    const updates = data?.data?.Page?.mediaList || [];
+
+                    // Transform to match structure if needed, or just use as is
+                    // The query returns mediaList items which contain 'media'
+                    const formatted = updates.map((item: any) => ({
+                        id: item.media.id,
+                        title: item.media.title,
+                        coverImage: item.media.coverImage,
+                        progress: item.progress,
+                        nextEpisode: item.media.nextAiringEpisode
+                    }));
+                    setAnimeList(formatted);
+                } else {
+                    // Fallback to Trending if not logged in
+                    const data = await fetchTrendingAnime(1, 10);
+                    const trending = data?.data?.Page?.media || [];
+                    setAnimeList(trending);
+                }
+            } catch (err) {
+                console.error("Failed to fetch anime", err);
+            } finally {
+                setAnimeLoading(false);
+            }
+        };
+
+        loadAnime();
+    }, [isAuthenticated, user]);
 
 
     useEffect(() => {
@@ -35,8 +75,8 @@ function Home() {
         <>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                 <SectionHeader
-                    title="Dashboard"
-                    subtitle="Track your anime watching activity"
+                    title={isAuthenticated ? `Welcome back, ${user?.name}` : "Dashboard"}
+                    subtitle={isAuthenticated ? "Continue watching where you left off" : "Track your anime watching activity"}
                     icon="🏠"
                 />
 
@@ -47,47 +87,64 @@ function Home() {
                     gap: '1.5rem',
                     marginBottom: '2rem',
                 }}>
-                    <StatCard icon="📺" label="Total Anime" value={24} color="#C7B8EA" />
+                    <StatCard icon="📺" label="Total Anime" value={animeList.length || 0} color="#C7B8EA" />
                     <StatCard icon="✅" label="Completed" value={12} color="#86EFAC" />
-                    <StatCard icon="▶️" label="Watching" value={8} color="#FFB5C5" />
+                    <StatCard icon="▶️" label="Watching" value={animeList.length || 0} color="#FFB5C5" />
                     <StatCard icon="⏸️" label="On Hold" value={4} color="#FFE5B4" />
                 </div>
 
                 {/* Tilted Cards Anime List */}
-                <div className="mb-12 flex justify-center items-center gap-8 overflow-x-auto py-8">
-                    {animeLoading ? (
-                        <p className="text-gray-400">Loading anime covers...</p>
-                    ) : favorites.length > 0 ? (
-                        favorites.map((anime) => {
-                            const title = anime.title.english || anime.title.romaji;
-                            return (
-                                <TiltedCard
-                                    key={anime.id}
-                                    imageSrc={anime.coverImage.extraLarge || anime.coverImage.large}
-                                    altText={title}
-                                    captionText={title}
-                                    containerHeight="260px"
-                                    containerWidth="180px"
-                                    imageHeight="260px"
-                                    imageWidth="180px"
-                                    rotateAmplitude={12}
-                                    scaleOnHover={1.15}
-                                    showMobileWarning={false}
-                                    showTooltip={true}
-                                    displayOverlayContent={true}
-                                    overlayContent={
-                                        <div className="p-4 w-full h-full flex items-end justify-center bg-gradient-to-t from-black/80 via-transparent to-transparent rounded-[15px]">
-                                            <p className="text-white font-bold text-center text-sm drop-shadow-md">
-                                                {title}
-                                            </p>
-                                        </div>
-                                    }
-                                />
-                            );
-                        })
-                    ) : (
-                        <p className="text-gray-400">No favorites found.</p>
-                    )}
+                <div className="mb-4">
+                    <h3 className="text-xl font-semibold text-gray-700 mb-4 px-4">
+                        {isAuthenticated ? "Currently Watching" : "Trending Now"}
+                    </h3>
+                    <div className="flex justify-center items-center gap-8 overflow-x-auto py-8">
+                        {animeLoading ? (
+                            <p className="text-gray-400">Loading anime covers...</p>
+                        ) : animeList.length > 0 ? (
+                            animeList.map((anime) => {
+                                const title = anime.title.english || anime.title.romaji;
+                                // For authenticated user, show progress
+                                const caption = isAuthenticated
+                                    ? `Ep ${anime.progress + 1} • ${anime.nextEpisode ? `Airing in ${Math.ceil(anime.nextEpisode.timeUntilAiring / 86400)}d` : 'Next ep soon'}`
+                                    : title;
+
+                                return (
+                                    <TiltedCard
+                                        key={anime.id}
+                                        imageSrc={anime.coverImage.extraLarge || anime.coverImage.large}
+                                        altText={title}
+                                        captionText={caption}
+                                        containerHeight="260px"
+                                        containerWidth="180px"
+                                        imageHeight="260px"
+                                        imageWidth="180px"
+                                        rotateAmplitude={12}
+                                        scaleOnHover={1.15}
+                                        showMobileWarning={false}
+                                        showTooltip={true}
+                                        displayOverlayContent={true}
+                                        overlayContent={
+                                            <div className="p-4 w-full h-full flex items-end justify-center bg-gradient-to-t from-black/80 via-transparent to-transparent rounded-[15px]">
+                                                <div>
+                                                    <p className="text-white font-bold text-center text-sm drop-shadow-md">
+                                                        {title}
+                                                    </p>
+                                                    {isAuthenticated && (
+                                                        <p className="text-xs text-green-300 text-center mt-1 font-mono">
+                                                            Ep {anime.progress} Watched
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        }
+                                    />
+                                );
+                            })
+                        ) : (
+                            <p className="text-gray-400">No anime found.</p>
+                        )}
+                    </div>
                 </div>
 
                 {/* Currently Playing Section */}
@@ -152,58 +209,6 @@ function Home() {
                             </p>
                         </div>
                     </Card>
-                </div>
-
-                {/* Recent Activity */}
-                <div>
-                    <h3 style={{
-                        fontSize: '1.5rem',
-                        fontWeight: '600',
-                        color: '#374151',
-                        marginBottom: '1rem',
-                    }}>
-                        📊 Recent Activity
-                    </h3>
-
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                        gap: '1rem',
-                    }}>
-                        {[
-                            { title: 'Attack on Titan S4', episode: 'Episode 16', time: '2 hours ago' },
-                            { title: 'Demon Slayer', episode: 'Episode 8', time: '1 day ago' },
-                            { title: 'My Hero Academia', episode: 'Episode 23', time: '2 days ago' },
-                        ].map((item, i) => (
-                            <Card key={i} hover>
-                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                    <div style={{
-                                        width: '60px',
-                                        height: '60px',
-                                        borderRadius: '12px',
-                                        background: 'linear-gradient(135deg, #E0BBE4 0%, #C7B8EA 100%)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '1.5rem',
-                                    }}>
-                                        📺
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: '600', color: '#374151', marginBottom: '0.25rem' }}>
-                                            {item.title}
-                                        </div>
-                                        <div style={{ fontSize: '0.9rem', color: '#6B7280' }}>
-                                            {item.episode}
-                                        </div>
-                                        <div style={{ fontSize: '0.8rem', color: '#9CA3AF', marginTop: '0.25rem' }}>
-                                            {item.time}
-                                        </div>
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
                 </div>
             </div>
         </>

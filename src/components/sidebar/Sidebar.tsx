@@ -1,6 +1,5 @@
 import { useState } from 'react';
-// @ts-ignore
-import { open } from '@tauri-apps/plugin-opener';
+
 import { useNavigate, useLocation } from 'react-router-dom';
 import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
@@ -25,7 +24,7 @@ function Sidebar({ width }: SidebarProps) {
     const [showProfileModal, setShowProfileModal] = useState(false);
 
     // Fetch public user data from global context
-    const { user, loading, error, isAuthenticated } = useAuth();
+    const { user, loading, error, isAuthenticated, login } = useAuth();
     // Fetch local folder data
     const { folders: localItems, addFolder } = useLocalMedia();
 
@@ -143,16 +142,11 @@ function Sidebar({ width }: SidebarProps) {
                 <div style={{ padding: '0 0.75rem 0.75rem' }}>
                     <button
                         onClick={async () => {
-                            // REPLACE WITH YOUR ACTUAL ANILIST CLIENT ID
-                            const CLIENT_ID = '24967'; // Placeholder ID (example)
-                            const redirectUri = 'playon://auth';
-                            const authUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirectUri}&response_type=token`;
-
                             try {
-                                // @ts-ignore - plugin-opener might have strict types
-                                await open(authUrl);
+                                // Calls login from AuthContext which handles the deep link redirect
+                                await login();
                             } catch (error) {
-                                console.error('Failed to open auth URL:', error);
+                                console.error('Failed to initiate login:', error);
                             }
                         }}
                         style={{

@@ -13,6 +13,10 @@ interface UseAuthReturn {
     loading: boolean;
     /** Error message */
     error: string | null;
+    /** Function to initiate login */
+    login: () => Promise<void>;
+    /** Function to logout */
+    logout: () => void;
 }
 
 /**
@@ -22,12 +26,14 @@ interface UseAuthReturn {
  * @returns Public user state
  */
 export function useAuth(): UseAuthReturn {
-    const { isAuthenticated, user, loading, error } = useAuthContext();
+    const { isAuthenticated, user, loading, error, login, logout } = useAuthContext();
 
     return {
         isAuthenticated,
         user,
         loading,
-        error
+        error,
+        login,
+        logout
     };
 }

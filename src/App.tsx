@@ -8,7 +8,7 @@ import Statistics from './pages/Statistics';
 import AnimeDetails from './pages/AnimeDetails';
 import CounterDemo from './pages/CounterDemo';
 import MainLayout from './layouts/MainLayout';
-import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
+import { AuthProvider } from './context/AuthContext';
 import { LocalMediaProvider } from './context/LocalMediaContext';
 import LocalFolder from './pages/LocalFolder';
 import "./App.css";
@@ -154,67 +154,34 @@ function App() {
     // Remove this line when ready for production!
     // localStorage.removeItem('onboardingCompleted'); 
     // localStorage.removeItem('username'); // Commented out to persist login for now
-
-    const initDeepLink = async () => {
-      // Setup deep link listener
-      await onOpenUrl((urls) => {
-        console.log('Deep link received:', urls);
-
-        for (const url of urls) {
-          if (url.startsWith('playon://auth')) {
-            // Parse hash fragment for access_token (Implicit Grant)
-            // URL looks like: playon://auth#access_token=...&token_type=Bearer&expires_in=...
-            const hashIndex = url.indexOf('#');
-            if (hashIndex !== -1) {
-              const hash = url.substring(hashIndex + 1);
-              const params = new URLSearchParams(hash);
-              const accessToken = params.get('access_token');
-
-              if (accessToken) {
-                console.log('Got Access Token:', accessToken);
-                localStorage.setItem('token', accessToken);
-                localStorage.setItem('anilist_token', accessToken); // Store in both just in case
-
-                // Notify user (Simple alert for now, or Toast)
-                // In production, use a nice Toast
-                alert('Login Successful! Reloading...');
-
-                // Reload to update Auth State
-                window.location.reload();
-              }
-            }
-          }
-        }
-      });
-    };
-
-    initDeepLink();
   }, []);
 
   return (
-    <LocalMediaProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Root route - checks if onboarding needed */}
-          <Route path="/" element={<ProtectedRoute />} />
+    <AuthProvider>
+      <LocalMediaProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Root route - checks if onboarding needed */}
+            <Route path="/" element={<ProtectedRoute />} />
 
-          {/* Main App Layout */}
-          <Route element={<MainLayout />}>
-            <Route path="/home" element={<Home />} />
-            <Route path="/anime-list" element={<AnimeList />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/statistics" element={<Statistics />} />
+            {/* Main App Layout */}
+            <Route element={<MainLayout />}>
+              <Route path="/home" element={<Home />} />
+              <Route path="/anime-list" element={<AnimeList />} />
+              <Route path="/history" element={<History />} />
+              <Route path="/statistics" element={<Statistics />} />
 
-            {/* Dynamic route for anime details */}
-            <Route path="/anime/:id" element={<AnimeDetails />} />
-            <Route path="/counter-demo" element={<CounterDemo />} />
+              {/* Dynamic route for anime details */}
+              <Route path="/anime/:id" element={<AnimeDetails />} />
+              <Route path="/counter-demo" element={<CounterDemo />} />
 
-            {/* Local Folder Route */}
-            <Route path="/local/:folderPath" element={<LocalFolder />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </LocalMediaProvider>
+              {/* Local Folder Route */}
+              <Route path="/local/:folderPath" element={<LocalFolder />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </LocalMediaProvider>
+    </AuthProvider>
   );
 }
 

@@ -30,9 +30,13 @@
     "targets": "all",
     "icon": [
       "icons/icon.ico"
-    ],
-    "deepLinks": [
-      "playon"
     ]
+  },
+  "plugins": {
+    "deep-link": {
+      "schemes": [
+        "playon"
+      ]
+    }
   }
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import colors from '../../styles/colors';
+import { useAuth } from '../../hooks/useAuth';
 
 interface UserProfileDialogProps {
     isOpen: boolean;
@@ -14,6 +15,7 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({
     user,
     isAuthenticated
 }) => {
+    const { logout } = useAuth();
     if (!isOpen) return null;
 
     const handleViewOnAniList = () => {
@@ -109,6 +111,33 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({
                     >
                         View in AniList
                     </button>
+
+                    {isAuthenticated && (
+                        <button
+                            onClick={() => {
+                                logout();
+                                onClose();
+                            }}
+                            style={{
+                                padding: '0.75rem',
+                                background: 'transparent',
+                                color: '#eb459f', // Pastel Pinkish/Red
+                                border: '1px solid #eb459f',
+                                borderRadius: '8px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(235, 69, 159, 0.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                            }}
+                        >
+                            Logout
+                        </button>
+                    )}
                 </div>
             </div>
 

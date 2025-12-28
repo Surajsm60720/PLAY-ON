@@ -30,4 +30,6 @@ tauri-plugin-http = "2"
 tauri-plugin-dialog = "2"
 base64 = "0.22.1"
 lofty = "0.22.4"
+tauri-plugin-shell = "2.3.3"
+tauri-plugin-single-instance = "2"
 

@@ -2,6 +2,10 @@
  * GraphQL Query to fetch public profile and favorite anime by username.
  * No tokens or keys required for this.
  */
+/**
+ * GraphQL Query to fetch public profile.
+ * No tokens or keys required for this.
+ */
 const PUBLIC_USER_QUERY = `
 query ($name: String) {
   User (name: $name) {
@@ -12,24 +16,75 @@ query ($name: String) {
       medium
     }
     bannerImage
-    favourites {
-      anime {
-        nodes {
-          id
-          title {
-            english
-            romaji
-          }
-          coverImage {
-            large
-            extraLarge
-          }
+  }
+}
+`;
+
+/**
+ * Query to fetch user's anime list by status (e.g., CURRENT).
+ */
+const USER_MEDIA_LIST_QUERY = `
+query ($userId: Int, $status: MediaListStatus) {
+  Page {
+    mediaList (userId: $userId, status: $status, type: ANIME, sort: UPDATED_TIME_DESC) {
+      id
+      progress
+      media {
+        id
+        title {
+          english
+          romaji
+        }
+        coverImage {
+          extraLarge
+          large
+        }
+        episodes
+        nextAiringEpisode {
+          episode
+          timeUntilAiring
         }
       }
     }
   }
 }
 `;
+
+// ... [Trending and Anime Details queries remain unchanged] ...
+
+/**
+ * Fetches public user data from AniList by username.
+ */
+export async function fetchPublicUser(username: string) {
+  // ... implementation
+  const response = await fetch('https://graphql.anilist.co', {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      query: PUBLIC_USER_QUERY,
+      variables: { name: username }
+    }),
+  });
+
+  return response.json();
+}
+
+/**
+ * Fetches the user's anime list for a specific status.
+ */
+export async function fetchUserMediaList(userId: number, status: 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'DROPPED' | 'PAUSED' | 'REPEATING') {
+  const response = await fetch('https://graphql.anilist.co', {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      query: USER_MEDIA_LIST_QUERY,
+      variables: { userId, status }
+    }),
+  });
+  return response.json();
+}
+
+// ... [Rest of file]
 
 /**
  * Fetches public user data and favorites from AniList by username.
@@ -152,21 +207,6 @@ function getHeaders() {
   return headers;
 }
 
-/**
- * Fetches public user data and favorites from AniList by username.
- */
-export async function fetchPublicUser(username: string) {
-  const response = await fetch('https://graphql.anilist.co', {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({
-      query: PUBLIC_USER_QUERY,
-      variables: { name: username }
-    }),
-  });
-
-  return response.json();
-}
 
 /**
  * Fetches trending anime data.
@@ -195,5 +235,49 @@ export async function fetchAnimeDetails(id: number) {
       variables: { id }
     }),
   });
+  return response.json();
+}
+
+/**
+ * Query to fetch the authenticated user (Viewer).
+ */
+const VIEWER_QUERY = `
+query {
+  Viewer {
+    id
+    name
+    avatar {
+      large
+      medium
+    }
+    bannerImage
+    options {
+      displayAdultContent
+    }
+    mediaListOptions {
+      scoreFormat
+    }
+  }
+}
+`;
+
+/**
+ * Fetches the authenticated user's profile.
+ * Requires a valid token in localStorage.
+ */
+export async function fetchCurrentUser() {
+  const token = localStorage.getItem('anilist_token') || localStorage.getItem('token');
+  if (!token) {
+    throw new Error('No access token found');
+  }
+
+  const response = await fetch('https://graphql.anilist.co', {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      query: VIEWER_QUERY
+    }),
+  });
+
   return response.json();
 }

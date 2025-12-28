@@ -192,3 +192,49 @@ pub async fn match_anime_from_title(window_title: &str) -> Result<Option<Anime>,
     // Return the first result (best match)
     Ok(results.into_iter().next())
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TokenResponse {
+    pub access_token: String,
+    pub token_type: String,
+    pub expires_in: i32,
+    pub refresh_token: Option<String>,
+}
+
+/// Exchange Authorization Code for Access Token
+pub async fn exchange_code_for_token(
+    code: String,
+    client_id: String,
+    client_secret: String,
+    redirect_uri: String,
+) -> Result<TokenResponse, String> {
+    let client = reqwest::Client::new();
+    let params = json!({
+        "grant_type": "authorization_code",
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_uri": redirect_uri,
+        "code": code
+    });
+
+    let response = client
+        .post("https://anilist.co/api/v2/oauth/token")
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json")
+        .json(&params)
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        let error_text = response.text().await.unwrap_or_default();
+        return Err(format!("Token exchange failed: {}", error_text));
+    }
+
+    let token_data: TokenResponse = response
+        .json()
+        .await
+        .map_err(|e| format!("Parse error: {}", e))?;
+
+    Ok(token_data)
+}

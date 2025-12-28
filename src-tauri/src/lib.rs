@@ -7,7 +7,10 @@ mod media_player;
 // Import the anilist module
 mod anilist;
 // Import file system module
+// Import file system module
 mod file_system;
+
+use tauri::{Emitter, Manager};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -102,6 +105,18 @@ fn get_active_media_window() -> String {
     }
 }
 
+#[tauri::command]
+async fn exchange_login_code(
+    code: String,
+    client_id: String,
+    client_secret: String,
+    redirect_uri: String,
+) -> Result<String, String> {
+    let token_data =
+        anilist::exchange_code_for_token(code, client_id, client_secret, redirect_uri).await?;
+    serde_json::to_string(&token_data).map_err(|e| format!("Serialization error: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -109,6 +124,23 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            println!("{}, {argv:?}, {_cwd}", app.package_info().name);
+
+            app.emit("single-instance", argv.clone()).unwrap();
+
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+
+                // Identify query string or url in argv
+                for arg in argv {
+                    if arg.starts_with("playon://") {
+                        let _ = window.emit("oauth_deep_link", arg);
+                    }
+                }
+            }
+        }))
         .invoke_handler(tauri::generate_handler![
             greet,
             get_active_window,
@@ -116,7 +148,8 @@ pub fn run() {
             search_anime_command,
             get_anime_by_id_command,
             match_anime_from_window_command,
-            file_system::get_folder_contents
+            file_system::get_folder_contents,
+            exchange_login_code
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
