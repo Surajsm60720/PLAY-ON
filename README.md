@@ -1,6 +1,6 @@
 # Tauri + React + Typescript
 
-<img src = "./public/logo.svg"/>
+<img src = "./public/assets/app-icon.png"/>
 
 This template should help get you started developing with Tauri, React and Typescript in Vite.
 
