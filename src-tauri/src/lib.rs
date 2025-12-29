@@ -207,6 +207,20 @@ async fn update_anime_progress_command(
     serde_json::to_string(&entry).map_err(|e| format!("Serialization error: {}", e))
 }
 
+/// Tauri command to search anime progressively (word by word)
+/// Uses the parsed title and searches AniList starting with 1 word
+///
+/// # Arguments
+/// * `title` - The parsed anime title to search
+///
+/// # Returns
+/// * JSON with the matched anime title and search info
+#[tauri::command]
+async fn progressive_search_command(title: String) -> Result<String, String> {
+    let result = anilist::progressive_search_anime(&title).await?;
+    serde_json::to_string(&result).map_err(|e| format!("Serialization error: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -242,7 +256,8 @@ pub fn run() {
             exchange_login_code,
             parse_window_title_command,
             detect_anime_command,
-            update_anime_progress_command
+            update_anime_progress_command,
+            progressive_search_command
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

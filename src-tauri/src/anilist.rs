@@ -4,6 +4,149 @@ use serde_json::json;
 /// AniList API endpoint
 const ANILIST_API_URL: &str = "https://graphql.anilist.co";
 
+/// Result of a simple title search
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TitleSearchResult {
+    pub english: Option<String>,
+    pub romaji: Option<String>,
+}
+
+/// Result of progressive search with match info
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProgressiveSearchResult {
+    pub title: TitleSearchResult,
+    pub matched_query: String, // The query that matched
+    pub words_used: usize,     // How many words were used
+    pub total_words: usize,    // Total words in original title
+}
+
+#[derive(Debug, Deserialize)]
+struct SimpleTitleResponse {
+    #[serde(rename = "Media")]
+    media: Option<SimpleTitleMedia>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SimpleTitleMedia {
+    title: TitleSearchResult,
+}
+
+/// Search anime title word-by-word, starting with 1 word
+///
+/// # Arguments
+/// * `title` - The parsed anime title to search
+///
+/// # Returns
+/// * `Result<Option<ProgressiveSearchResult>, String>` - Match result or error
+///
+/// # Strategy
+/// 1. Split title into words
+/// 2. Search with first word
+/// 3. If found, return the result
+/// 4. If not, add next word and try again
+/// 5. Continue until match found or all words tried
+pub async fn progressive_search_anime(
+    title: &str,
+) -> Result<Option<ProgressiveSearchResult>, String> {
+    let words: Vec<&str> = title.split_whitespace().collect();
+
+    if words.is_empty() {
+        return Ok(None);
+    }
+
+    let total_words = words.len();
+
+    // Try progressively more words
+    for word_count in 1..=total_words {
+        let search_query: String = words[..word_count].join(" ");
+        let search_query_lower = search_query.to_lowercase();
+
+        println!(
+            "[AniList] Searching with {} word(s): \"{}\"",
+            word_count, search_query
+        );
+
+        // Use the simple title query
+        let graphql_query = r#"
+            query Title($search: String) {
+                Media(search: $search, type: ANIME) {
+                    title {
+                        english
+                        romaji
+                    }
+                }
+            }
+        "#;
+
+        let variables = json!({
+            "search": search_query
+        });
+
+        let request_body = json!({
+            "query": graphql_query,
+            "variables": variables
+        });
+
+        let client = reqwest::Client::new();
+        let response = client
+            .post(ANILIST_API_URL)
+            .header("Content-Type", "application/json")
+            .header("Accept", "application/json")
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to send request: {}", e))?;
+
+        let anilist_response: AniListResponse<SimpleTitleResponse> = response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+        if let Some(ref media) = anilist_response.data.media {
+            // Validate: Check if returned title contains our search query
+            let english_lower = media
+                .title
+                .english
+                .as_ref()
+                .map(|s| s.to_lowercase())
+                .unwrap_or_default();
+            let romaji_lower = media
+                .title
+                .romaji
+                .as_ref()
+                .map(|s| s.to_lowercase())
+                .unwrap_or_default();
+
+            // Check if either title contains ALL our search words
+            let title_matches = search_query_lower
+                .split_whitespace()
+                .all(|word| english_lower.contains(word) || romaji_lower.contains(word));
+
+            if title_matches {
+                println!("[AniList] ✓ Valid match: {:?}", media.title);
+                return Ok(Some(ProgressiveSearchResult {
+                    title: media.title.clone(),
+                    matched_query: search_query,
+                    words_used: word_count,
+                    total_words,
+                }));
+            } else {
+                println!(
+                    "[AniList] ✗ Rejected (title doesn't match query): {:?}",
+                    media.title
+                );
+                // Continue with more words
+            }
+        }
+    }
+
+    println!(
+        "[AniList] No valid match found after trying all {} words",
+        total_words
+    );
+    Ok(None)
+}
+
 /// Represents an anime from AniList
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Anime {

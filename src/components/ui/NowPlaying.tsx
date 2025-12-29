@@ -24,6 +24,16 @@ interface DetectionResult {
     } | null;
 }
 
+interface ProgressiveSearchResult {
+    title: {
+        english: string | null;
+        romaji: string | null;
+    };
+    matched_query: string;
+    words_used: number;
+    total_words: number;
+}
+
 interface NowPlayingProps {
     onAnimeDetected?: (result: DetectionResult) => void;
 }
@@ -32,6 +42,25 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
     const [detection, setDetection] = useState<DetectionResult | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [progressiveResult, setProgressiveResult] = useState<ProgressiveSearchResult | null>(null);
+    const [isSearching, setIsSearching] = useState(false);
+
+    // Test progressive search with a sample title
+    const testProgressiveSearch = async () => {
+        setIsSearching(true);
+        try {
+            const testTitle = detection?.parsed?.title || 'Frieren Beyond Journey End';
+            console.log('[Test] Starting progressive search for:', testTitle);
+            const result = await invoke<string>('progressive_search_command', { title: testTitle });
+            const parsed: ProgressiveSearchResult | null = JSON.parse(result);
+            console.log('[Test] Progressive search result:', parsed);
+            setProgressiveResult(parsed);
+        } catch (err) {
+            console.error('[Test] Progressive search error:', err);
+        } finally {
+            setIsSearching(false);
+        }
+    };
 
     useEffect(() => {
         const detectAnime = async () => {
@@ -256,6 +285,53 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
                         </p>
                     </div>
                 )}
+
+                {/* Test Progressive Search Section */}
+                <div style={{
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    background: 'rgba(180, 162, 246, 0.1)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(180, 162, 246, 0.2)',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                        <span style={{ fontSize: '0.9rem', color: '#B4A2F6' }}>🔬 Test Progressive Search</span>
+                        <button
+                            onClick={testProgressiveSearch}
+                            disabled={isSearching}
+                            style={{
+                                padding: '0.4rem 0.8rem',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: isSearching ? '#6B7280' : '#B4A2F6',
+                                color: '#FFFFFF',
+                                fontSize: '0.8rem',
+                                fontWeight: '500',
+                                cursor: isSearching ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s ease',
+                            }}
+                        >
+                            {isSearching ? 'Searching...' : 'Test Search'}
+                        </button>
+                    </div>
+                    {progressiveResult && (
+                        <div style={{
+                            fontSize: '0.85rem',
+                            color: '#9CA3AF',
+                            background: 'rgba(0, 0, 0, 0.2)',
+                            padding: '0.75rem',
+                            borderRadius: '8px',
+                        }}>
+                            <div style={{ marginBottom: '0.25rem' }}>
+                                <strong style={{ color: '#86EFAC' }}>Found:</strong>{' '}
+                                {progressiveResult.title.english || progressiveResult.title.romaji}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+                                Matched with "{progressiveResult.matched_query}" ({progressiveResult.words_used}/{progressiveResult.total_words} words)
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* CSS Animations */}
