@@ -39,7 +39,7 @@ const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress }) => {
                 </h3>
                 {anime.averageScore && (
                     <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs font-semibold text-green-400">
+                        <span className="text-xs font-semibold text-mint-tonic">
                             {anime.averageScore}% Match
                         </span>
                         {anime.format && (

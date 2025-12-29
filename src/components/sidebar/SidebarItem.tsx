@@ -45,7 +45,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ label, icon, isActive, onClic
                     top: '20%',
                     bottom: '20%',
                     width: '4px',
-                    backgroundColor: colors.pastelPink,
+                    backgroundColor: colors.lavenderMist,
                     borderRadius: '0 4px 4px 0',
                 }} />
             )}
@@ -54,7 +54,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ label, icon, isActive, onClic
                 fontSize: '1.25rem',
                 display: 'flex',
                 alignItems: 'center',
-                color: isActive ? colors.pastelPink : (isHovered ? '#FFFFFF' : '#B5BAC1'),
+                color: isActive ? colors.lavenderMist : (isHovered ? '#FFFFFF' : '#B5BAC1'),
                 transition: 'color 0.2s ease',
             }}>
                 {icon}

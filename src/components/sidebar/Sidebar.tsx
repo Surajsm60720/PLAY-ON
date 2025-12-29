@@ -119,7 +119,7 @@ function Sidebar({ width }: SidebarProps) {
                         style={{
                             padding: '0.5rem 0.75rem',
                             borderRadius: '4px',
-                            color: colors.pastelPink, // Accent color
+                            color: colors.lavenderMist, // Accent color
                             cursor: 'pointer',
                             fontSize: '0.85rem',
                             transition: 'all 0.2s',
@@ -153,7 +153,7 @@ function Sidebar({ width }: SidebarProps) {
                             width: '100%',
                             padding: '0.75rem',
                             borderRadius: '8px',
-                            background: colors.pastelPink,
+                            background: colors.lavenderMist,
                             color: '#1a1b1e',
                             fontWeight: '600',
                             border: 'none',
@@ -197,7 +197,7 @@ function Sidebar({ width }: SidebarProps) {
                         width: '36px',
                         height: '36px',
                         borderRadius: '50%',
-                        background: loading ? '#404249' : (!isAuthenticated || error || !user?.avatar?.large) ? colors.pastelPink : 'transparent',
+                        background: loading ? '#404249' : (!isAuthenticated || error || !user?.avatar?.large) ? colors.lavenderMist : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',

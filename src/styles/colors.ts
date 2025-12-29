@@ -14,6 +14,13 @@ export const colors = {
     pastelMint: '#B8E6D5',
     pastelYellow: '#FFF9B0',
 
+    // New Custom Palette
+    lavenderMist: '#B4A2F6',
+    softPeach: '#FFBE98',
+    mintTonic: '#9DF0B3',
+    skyBlue: '#A5DBF8',
+    starGlow: '#FFF4BD',
+
     // Darker variants for text/accents
     purpleDark: '#9B7FD9',
     pinkDark: '#FF8FA3',
