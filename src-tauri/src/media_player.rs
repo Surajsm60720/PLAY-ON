@@ -75,11 +75,6 @@ pub fn detect_media_player(title: &str) -> Option<MediaPlayer> {
         || title_lower.contains("crunchyroll")
         || title_lower.contains("funimation")
         || title_lower.contains("hidive")
-        || title_lower.contains("animixplay")
-        || title_lower.contains("9anime")
-        || title_lower.contains("gogoanime")
-        || title_lower.contains("zoro")
-        || title_lower.contains("aniwave")
     {
         return Some(MediaPlayer::Browser);
     }
