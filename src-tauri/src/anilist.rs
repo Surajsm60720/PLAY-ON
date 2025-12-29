@@ -238,3 +238,85 @@ pub async fn exchange_code_for_token(
 
     Ok(token_data)
 }
+
+/// Response from SaveMediaListEntry mutation
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MediaListEntry {
+    pub id: i32,
+    pub progress: i32,
+    pub status: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct SaveMediaListResponse {
+    #[serde(rename = "SaveMediaListEntry")]
+    save_media_list_entry: MediaListEntry,
+}
+
+/// Update anime progress on AniList (requires authentication)
+///
+/// # Arguments
+/// * `access_token` - OAuth access token for authentication
+/// * `media_id` - AniList media ID
+/// * `progress` - Episode number to set as progress
+/// * `status` - Optional status (CURRENT, COMPLETED, PAUSED, DROPPED, PLANNING, REPEATING)
+///
+/// # Returns
+/// * `Result<MediaListEntry, String>` - Updated entry or error message
+pub async fn update_media_progress(
+    access_token: &str,
+    media_id: i32,
+    progress: i32,
+    status: Option<&str>,
+) -> Result<MediaListEntry, String> {
+    let graphql_mutation = r#"
+        mutation UpdateMediaProgress($mediaId: Int, $progress: Int, $status: MediaListStatus) {
+            SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status) {
+                id
+                progress
+                status
+            }
+        }
+    "#;
+
+    let variables = if let Some(s) = status {
+        json!({
+            "mediaId": media_id,
+            "progress": progress,
+            "status": s
+        })
+    } else {
+        json!({
+            "mediaId": media_id,
+            "progress": progress
+        })
+    };
+
+    let request_body = json!({
+        "query": graphql_mutation,
+        "variables": variables
+    });
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(ANILIST_API_URL)
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json")
+        .header("Authorization", format!("Bearer {}", access_token))
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send request: {}", e))?;
+
+    if !response.status().is_success() {
+        let error_text = response.text().await.unwrap_or_default();
+        return Err(format!("Update failed: {}", error_text));
+    }
+
+    let anilist_response: AniListResponse<SaveMediaListResponse> = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    Ok(anilist_response.data.save_media_list_entry)
+}

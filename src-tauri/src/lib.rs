@@ -9,6 +9,8 @@ mod anilist;
 // Import file system module
 // Import file system module
 mod file_system;
+// Import title parser module
+mod title_parser;
 
 use tauri::{Emitter, Manager};
 
@@ -117,6 +119,94 @@ async fn exchange_login_code(
     serde_json::to_string(&token_data).map_err(|e| format!("Serialization error: {}", e))
 }
 
+/// Tauri command to parse a window title and extract anime info
+///
+/// # Arguments
+/// * `window_title` - The window title to parse
+///
+/// # Returns
+/// * JSON string with parsed title, episode, and season
+#[tauri::command]
+fn parse_window_title_command(window_title: String) -> String {
+    let parsed = title_parser::parse_window_title(&window_title);
+    serde_json::to_string(&parsed).unwrap_or_else(|_| "null".to_string())
+}
+
+/// Tauri command to detect anime from the current media player window
+/// Combines: media detection → title parsing → AniList search
+///
+/// # Returns
+/// * JSON with detected anime info including parsed title, episode, and matched AniList entry
+#[tauri::command]
+async fn detect_anime_command() -> Result<String, String> {
+    use serde_json::json;
+
+    // Get active window title
+    let window_title = match win_name::get_active_window_title() {
+        Some(t) => t,
+        None => return Ok(json!({ "status": "no_window" }).to_string()),
+    };
+
+    // Check if it's a media player
+    let player = match media_player::detect_media_player(&window_title) {
+        Some(p) => p,
+        None => {
+            return Ok(json!({ "status": "not_media_player", "window": window_title }).to_string())
+        }
+    };
+
+    // Parse the window title
+    let parsed = title_parser::parse_window_title(&window_title);
+
+    // If we got a title, search AniList
+    let anime_match = if let Some(ref title) = parsed.title {
+        match anilist::search_anime(title, 1).await {
+            Ok(results) => results.into_iter().next(),
+            Err(_) => None,
+        }
+    } else {
+        None
+    };
+
+    // Build response
+    let response = json!({
+        "status": "detected",
+        "player": format!("{:?}", player),
+        "window_title": window_title,
+        "parsed": {
+            "title": parsed.title,
+            "episode": parsed.episode,
+            "season": parsed.season
+        },
+        "anilist_match": anime_match
+    });
+
+    Ok(response.to_string())
+}
+
+/// Tauri command to update anime progress on AniList
+///
+/// # Arguments
+/// * `access_token` - OAuth access token
+/// * `media_id` - AniList media ID
+/// * `progress` - Episode number
+/// * `status` - Optional status (CURRENT, COMPLETED, etc.)
+///
+/// # Returns
+/// * JSON with updated entry or error
+#[tauri::command]
+async fn update_anime_progress_command(
+    access_token: String,
+    media_id: i32,
+    progress: i32,
+    status: Option<String>,
+) -> Result<String, String> {
+    let status_ref = status.as_deref();
+    let entry =
+        anilist::update_media_progress(&access_token, media_id, progress, status_ref).await?;
+    serde_json::to_string(&entry).map_err(|e| format!("Serialization error: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -149,7 +239,10 @@ pub fn run() {
             get_anime_by_id_command,
             match_anime_from_window_command,
             file_system::get_folder_contents,
-            exchange_login_code
+            exchange_login_code,
+            parse_window_title_command,
+            detect_anime_command,
+            update_anime_progress_command
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
