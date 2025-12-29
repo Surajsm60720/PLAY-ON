@@ -31,33 +31,72 @@ pub struct ParsedTitle {
 /// - `Anime Title S02E05.mkv - mpv`
 /// - `Anime Title Episode 12 - MPC-HC`
 /// - `Anime Title - 05.mp4`
+/// - `Anime_Title_01.mkv` (underscores as spaces)
+/// - `Anime.Title.01.mkv` (dots as spaces)
 pub fn parse_window_title(window_title: &str) -> ParsedTitle {
     // First, remove the media player suffix
     let cleaned = remove_player_suffix(window_title);
 
+    // Normalize separators: treat _ and . as spaces (common in filenames)
+    let normalized = normalize_separators(&cleaned);
+
     // Try different parsing strategies
-    if let Some(result) = try_parse_season_episode(&cleaned) {
+    if let Some(result) = try_parse_season_episode(&normalized) {
         return result;
     }
 
-    if let Some(result) = try_parse_episode_keyword(&cleaned) {
+    if let Some(result) = try_parse_episode_keyword(&normalized) {
         return result;
     }
 
-    if let Some(result) = try_parse_dash_number(&cleaned) {
+    if let Some(result) = try_parse_dash_number(&normalized) {
         return result;
     }
 
-    if let Some(result) = try_parse_bracketed(&cleaned) {
+    if let Some(result) = try_parse_bracketed(&normalized) {
         return result;
     }
 
     // Fallback: just clean the title
     ParsedTitle {
-        title: Some(clean_title(&cleaned)),
+        title: Some(clean_title(&normalized)),
         episode: None,
         season: None,
     }
+}
+
+/// Normalize common filename separators to spaces
+/// Converts underscores and dots to spaces (except dots in file extensions)
+fn normalize_separators(title: &str) -> String {
+    let mut result = title.to_string();
+
+    // First, protect file extensions by temporarily replacing them
+    let extensions = [
+        ".mkv", ".mp4", ".avi", ".webm", ".m4v", ".mov", ".wmv", ".flv",
+    ];
+    let mut ext_found = String::new();
+    for ext in &extensions {
+        if result.to_lowercase().ends_with(ext) {
+            ext_found = ext.to_string();
+            result = result[..result.len() - ext.len()].to_string();
+            break;
+        }
+    }
+
+    // Replace underscores with spaces
+    result = result.replace('_', " ");
+
+    // Replace dots with spaces (these are likely word separators in filenames)
+    result = result.replace('.', " ");
+
+    // Clean up multiple spaces
+    let space_re = Regex::new(r"\s+").unwrap();
+    result = space_re.replace_all(&result, " ").to_string();
+
+    // Add extension back (will be removed by clean_title later)
+    result.push_str(&ext_found);
+
+    result.trim().to_string()
 }
 
 /// Remove common media player suffixes from window title
