@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { updateProgress } from '../../lib/localAnimeDb';
+import { syncEntryToAniList } from '../../lib/syncService';
 
 interface DetectionResult {
     status: 'detected' | 'not_media_player' | 'no_window';
@@ -44,6 +46,10 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
     const [error, setError] = useState<string | null>(null);
     const [progressiveResult, setProgressiveResult] = useState<ProgressiveSearchResult | null>(null);
     const [isSearching, setIsSearching] = useState(false);
+    const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'syncing' | 'synced' | 'error'>('idle');
+
+    // Track last saved episode to avoid duplicate saves
+    const lastSavedRef = useRef<string | null>(null);
 
     // Test progressive search with a sample title
     const testProgressiveSearch = async () => {
@@ -62,6 +68,49 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
         }
     };
 
+    // Save progress locally and sync to AniList
+    const saveAndSync = async (result: DetectionResult) => {
+        if (!result.parsed?.title || !result.parsed?.episode) return;
+
+        const anilistMatch = result.anilist_match;
+        const saveKey = `${anilistMatch?.id || result.parsed.title}-ep${result.parsed.episode}`;
+
+        // Skip if already saved this episode
+        if (lastSavedRef.current === saveKey) return;
+        lastSavedRef.current = saveKey;
+
+        try {
+            setSyncStatus('saving');
+
+            // Save to local DB first (instant)
+            const entry = updateProgress(
+                String(anilistMatch?.id || result.parsed.title),
+                {
+                    title: anilistMatch?.title.english || anilistMatch?.title.romaji || result.parsed.title,
+                    titleRomaji: anilistMatch?.title.romaji,
+                    episode: result.parsed.episode,
+                    totalEpisodes: anilistMatch?.episodes || undefined,
+                    anilistId: anilistMatch?.id,
+                    coverImage: anilistMatch?.coverImage.large || anilistMatch?.coverImage.medium,
+                }
+            );
+
+            console.log('[NowPlaying] Saved to local DB:', entry.title, 'Ep', entry.episode);
+
+            // Sync to AniList in background if we have a match
+            if (anilistMatch?.id) {
+                setSyncStatus('syncing');
+                const synced = await syncEntryToAniList(entry);
+                setSyncStatus(synced ? 'synced' : 'error');
+            } else {
+                setSyncStatus('idle'); // No AniList match, just saved locally
+            }
+        } catch (err) {
+            console.error('[NowPlaying] Save/sync error:', err);
+            setSyncStatus('error');
+        }
+    };
+
     useEffect(() => {
         const detectAnime = async () => {
             try {
@@ -70,8 +119,15 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
                 setDetection(parsed);
                 setError(null);
 
-                if (parsed.status === 'detected' && onAnimeDetected) {
-                    onAnimeDetected(parsed);
+                if (parsed.status === 'detected') {
+                    if (onAnimeDetected) {
+                        onAnimeDetected(parsed);
+                    }
+
+                    // Save progress when we detect anime with episode
+                    if (parsed.parsed?.episode) {
+                        saveAndSync(parsed);
+                    }
                 }
             } catch (err) {
                 console.error('Error detecting anime:', err);
@@ -269,6 +325,42 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
                                     </>
                                 )}
                             </div>
+
+                            {/* Sync Status Indicator */}
+                            {syncStatus !== 'idle' && (
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    fontSize: '0.75rem',
+                                    marginTop: '0.5rem',
+                                    padding: '0.35rem 0.6rem',
+                                    borderRadius: '6px',
+                                    background: syncStatus === 'synced'
+                                        ? 'rgba(134, 239, 172, 0.15)'
+                                        : syncStatus === 'error'
+                                            ? 'rgba(239, 68, 68, 0.15)'
+                                            : 'rgba(180, 162, 246, 0.15)',
+                                    color: syncStatus === 'synced'
+                                        ? '#86EFAC'
+                                        : syncStatus === 'error'
+                                            ? '#EF4444'
+                                            : '#B4A2F6',
+                                }}>
+                                    <span>
+                                        {syncStatus === 'saving' && '💾'}
+                                        {syncStatus === 'syncing' && '🔄'}
+                                        {syncStatus === 'synced' && '☁️'}
+                                        {syncStatus === 'error' && '⚠️'}
+                                    </span>
+                                    <span>
+                                        {syncStatus === 'saving' && 'Saving locally...'}
+                                        {syncStatus === 'syncing' && 'Syncing to AniList...'}
+                                        {syncStatus === 'synced' && 'Synced!'}
+                                        {syncStatus === 'error' && 'Sync failed (queued)'}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ) : (
