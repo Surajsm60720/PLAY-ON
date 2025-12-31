@@ -14,7 +14,7 @@ import { useLocalMedia } from '../context/LocalMediaContext';
  */
 function Onboarding() {
     const navigate = useNavigate();
-    const { login, isAuthenticated, user, loading: authLoading } = useAuthContext();
+    const { login, isAuthenticated, user, loading: authLoading, loginWithCode } = useAuthContext();
     const { addFolder, folders, removeFolder } = useLocalMedia();
 
     // Local state for username if they skip login or want to set a local name
@@ -129,9 +129,22 @@ function Onboarding() {
                                         >
                                             {authLoading ? 'Connecting...' : 'Login with AniList'}
                                         </button>
-                                        <p className="text-sm text-gray-500">
-                                            Don't have an account? You can skip this step, but features will be limited.
-                                        </p>
+                                        <div className="flex flex-col items-center gap-2">
+                                            <p className="text-sm text-gray-500">
+                                                Don't have an account? You can skip this step, but features will be limited.
+                                            </p>
+                                            <button
+                                                onClick={() => {
+                                                    const code = window.prompt("Paste the 'code' from the AniList URL here:");
+                                                    if (code) {
+                                                        loginWithCode(code);
+                                                    }
+                                                }}
+                                                className="text-xs text-[#3DB4F2] hover:underline opacity-60 hover:opacity-100"
+                                            >
+                                                Trouble logging in? Paste code manually
+                                            </button>
+                                        </div>
                                     </>
                                 )}
                             </div>

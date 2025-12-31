@@ -35,6 +35,7 @@ interface AuthContextType {
     error: string | null;
     login: () => Promise<void>;
     logout: () => void;
+    loginWithCode: (code: string) => Promise<void>;
     handleDeepLink: (url: string) => Promise<void>;
 }
 
@@ -58,6 +59,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let unlistenSingleInstance: (() => void) | undefined;
 
         const initDeepLink = async () => {
+            // Check for initial URL if app was started via deep link
+            const { getCurrent } = await import('@tauri-apps/plugin-deep-link');
+            const initialUrls = await getCurrent();
+            if (initialUrls && initialUrls.length > 0) {
+                console.log('Initial deep link detected:', initialUrls);
+                for (const url of initialUrls) {
+                    if (url.startsWith('playon://auth')) {
+                        handleDeepLink(url);
+                    }
+                }
+            }
+
             unlisten = await onOpenUrl((urls) => {
                 console.log('Deep link received:', urls);
                 for (const url of urls) {
@@ -68,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
 
             // Also listen for single-instance event from backend (Windows)
-            unlistenSingleInstance = await listen<string>('oauth_deep_link', (event) => {
+            unlistenSingleInstance = await listen<string>('auth-callback', (event) => {
                 console.log('Single Instance Deep link received:', event.payload);
                 handleDeepLink(event.payload);
             });
@@ -208,6 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error,
         login,
         logout,
+        loginWithCode: exchangeCodeForToken,
         handleDeepLink
     };
 

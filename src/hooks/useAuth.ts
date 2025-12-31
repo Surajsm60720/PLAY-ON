@@ -17,6 +17,8 @@ interface UseAuthReturn {
     login: () => Promise<void>;
     /** Function to logout */
     logout: () => void;
+    /** Function to login with manual code */
+    loginWithCode: (code: string) => Promise<void>;
 }
 
 /**
@@ -26,7 +28,7 @@ interface UseAuthReturn {
  * @returns Public user state
  */
 export function useAuth(): UseAuthReturn {
-    const { isAuthenticated, user, loading, error, login, logout } = useAuthContext();
+    const { isAuthenticated, user, loading, error, login, logout, loginWithCode } = useAuthContext();
 
     return {
         isAuthenticated,
@@ -34,6 +36,7 @@ export function useAuth(): UseAuthReturn {
         loading,
         error,
         login,
-        logout
+        logout,
+        loginWithCode
     };
 }

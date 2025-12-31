@@ -275,7 +275,7 @@ pub fn run() {
                 // Identify query string or url in argv
                 for arg in argv {
                     if arg.starts_with("playon://") {
-                        let _ = window.emit("oauth_deep_link", arg);
+                        let _ = window.emit("auth-callback", arg);
                     }
                 }
             }
@@ -294,6 +294,16 @@ pub fn run() {
             update_anime_progress_command,
             progressive_search_command
         ])
+        .setup(|app| {
+            // Register deep links at runtime for development mode (Windows/Linux)
+            // This is needed because deep links are only registered on install by default
+            #[cfg(any(target_os = "linux", windows))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                app.deep_link().register_all()?;
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

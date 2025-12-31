@@ -24,7 +24,7 @@ function Sidebar({ width }: SidebarProps) {
     const [showProfileModal, setShowProfileModal] = useState(false);
 
     // Fetch public user data from global context
-    const { user, loading, error, isAuthenticated, login } = useAuth();
+    const { user, loading, error, isAuthenticated, login, loginWithCode } = useAuth();
     // Fetch local folder data
     const { folders: localItems, addFolder } = useLocalMedia();
 
@@ -165,6 +165,27 @@ function Sidebar({ width }: SidebarProps) {
                         onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                     >
                         Login with AniList
+                    </button>
+                    <button
+                        onClick={() => {
+                            const code = window.prompt("Paste the 'code' from the AniList URL here:");
+                            if (code) {
+                                loginWithCode(code);
+                            }
+                        }}
+                        style={{
+                            width: '100%',
+                            background: 'none',
+                            border: 'none',
+                            color: colors.lavenderMist,
+                            fontSize: '0.75rem',
+                            marginTop: '0.5rem',
+                            cursor: 'pointer',
+                            opacity: 0.6,
+                            textDecoration: 'underline'
+                        }}
+                    >
+                        Trouble logging in?
                     </button>
                 </div>
             )}
