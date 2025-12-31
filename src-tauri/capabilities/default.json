@@ -17,6 +17,7 @@
     "http:default",
     "dialog:default",
     "shell:allow-open",
-    "process:default"
+    "process:default",
+    "drpc:default"
   ]
 }

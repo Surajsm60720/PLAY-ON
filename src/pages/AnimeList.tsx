@@ -112,7 +112,7 @@ function AnimeList() {
     const error = queryError ? "Failed to fetch anime list." : null;
 
     const handleAnimeClick = (id: number) => {
-        navigate(`/anime/details/${id}`);
+        navigate(`/anime/${id}`);
     };
 
     // Calculate stats

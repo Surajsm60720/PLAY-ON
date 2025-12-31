@@ -149,12 +149,16 @@ function ProtectedRoute() {
  * - Tauri window stays open, content inside changes
  */
 import { useOfflineSync } from './lib/offlineQueue';
+import { useDiscordRPC } from './hooks/useDiscordRPC';
 
 import { ApolloProvider } from '@apollo/client';
 import { apolloClient } from './lib/apollo';
 
 function App() {
   useOfflineSync();
+
+  // Enable Discord Rich Presence - automatically updates based on what you're watching
+  useDiscordRPC(true);
 
   useEffect(() => {
     // DEV: Clear onboarding status to force onboarding every time

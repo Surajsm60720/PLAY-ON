@@ -13,20 +13,31 @@ function AnimeDetails() {
     const [updating, setUpdating] = useState(false);
 
     useEffect(() => {
-        if (!id) return;
+        if (!id) {
+            console.log('[AnimeDetails] No ID provided');
+            return;
+        }
         async function load() {
+            console.log('[AnimeDetails] Loading anime ID:', id);
             setLoading(true);
-            const data = await getAnimeDetails(parseInt(id!));
-            if (data) {
-                setAnime(data);
-                if (data.mediaListEntry) {
-                    setProgress(data.mediaListEntry.progress);
+            try {
+                const data = await getAnimeDetails(parseInt(id!));
+                console.log('[AnimeDetails] Received data:', data);
+                if (data) {
+                    setAnime(data);
+                    if (data.mediaListEntry) {
+                        setProgress(data.mediaListEntry.progress);
+                    }
+                } else {
+                    console.log('[AnimeDetails] No data returned');
                 }
+            } catch (err) {
+                console.error('[AnimeDetails] Error loading anime:', err);
             }
             setLoading(false);
         }
         load();
-    }, [id]);
+    }, [id, getAnimeDetails]);
 
     const handleProgressUpdate = async (newProgress: number) => {
         if (!anime || updating) return;

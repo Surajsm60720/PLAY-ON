@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchTrendingAnime, fetchAnimeDetails } from '../api/anilistClient';
 
 export interface Anime {
@@ -61,15 +61,17 @@ export function useAnimeData() {
         loadTrending();
     }, []);
 
-    const getAnimeDetails = async (id: number) => {
+    const getAnimeDetails = useCallback(async (id: number): Promise<Anime | null> => {
         try {
+            console.log('[useAnimeData] Fetching details for anime ID:', id);
             const data = await fetchAnimeDetails(id);
+            console.log('[useAnimeData] Got data:', data.data?.Media);
             return data.data?.Media as Anime;
         } catch (err) {
-            console.error(`Failed to fetch details for anime ${id}:`, err);
+            console.error(`[useAnimeData] Failed to fetch details for anime ${id}:`, err);
             return null;
         }
-    };
+    }, []);
 
     return { trending, loading, error, getAnimeDetails };
 }

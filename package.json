@@ -34,7 +34,8 @@
     "react-router-dom": "^7.11.0",
     "react-virtuoso": "^4.18.0",
     "rxjs": "^7.8.2",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^4.1.18",
+    "tauri-plugin-drpc": "^1.0.3"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

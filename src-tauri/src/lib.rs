@@ -127,8 +127,47 @@ fn parse_window_title_command(window_title: String) -> String {
     serde_json::to_string(&parsed).unwrap_or_else(|_| "null".to_string())
 }
 
+/// Simple in-memory cache for AniList lookups
+/// This prevents hammering the API with repeated lookups for the same title
+use std::collections::HashMap;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+
+struct CacheEntry {
+    anime: Option<anilist::Anime>,
+    timestamp: Instant,
+}
+
+lazy_static::lazy_static! {
+    static ref ANILIST_CACHE: Mutex<HashMap<String, CacheEntry>> = Mutex::new(HashMap::new());
+}
+
+const CACHE_DURATION: Duration = Duration::from_secs(300); // 5 minutes
+
+fn get_cached_anime(title: &str) -> Option<Option<anilist::Anime>> {
+    let cache = ANILIST_CACHE.lock().ok()?;
+    if let Some(entry) = cache.get(title) {
+        if entry.timestamp.elapsed() < CACHE_DURATION {
+            return Some(entry.anime.clone());
+        }
+    }
+    None
+}
+
+fn set_cached_anime(title: String, anime: Option<anilist::Anime>) {
+    if let Ok(mut cache) = ANILIST_CACHE.lock() {
+        cache.insert(
+            title,
+            CacheEntry {
+                anime,
+                timestamp: Instant::now(),
+            },
+        );
+    }
+}
+
 /// Tauri command to detect anime from the current media player window
-/// Combines: media detection → title parsing → AniList search
+/// Combines: media detection → title parsing → AniList search (with caching)
 ///
 /// # Returns
 /// * JSON with detected anime info including parsed title, episode, and matched AniList entry
@@ -136,16 +175,36 @@ fn parse_window_title_command(window_title: String) -> String {
 async fn detect_anime_command() -> Result<String, String> {
     use serde_json::json;
 
+    // Helper function to search with caching
+    async fn search_with_cache(title: &str) -> Option<anilist::Anime> {
+        // Check cache first
+        if let Some(cached) = get_cached_anime(title) {
+            println!("[Detection] Cache hit for: {}", title);
+            return cached;
+        }
+
+        // Not in cache, make API call
+        println!("[Detection] Cache miss, searching AniList for: {}", title);
+        let result = match anilist::search_anime(title, 1).await {
+            Ok(results) => results.into_iter().next(),
+            Err(e) => {
+                println!("[Detection] AniList search error: {}", e);
+                None
+            }
+        };
+
+        // Cache the result (even if None)
+        set_cached_anime(title.to_string(), result.clone());
+        result
+    }
+
     // 1. Try active window first
     let active_title = win_name::get_active_window_title();
     if let Some(ref window_title) = active_title {
         if let Some(player) = media_player::detect_media_player(window_title) {
             let parsed = title_parser::parse_window_title(window_title);
             let anime_match = if let Some(ref title) = parsed.title {
-                match anilist::search_anime(title, 1).await {
-                    Ok(results) => results.into_iter().next(),
-                    Err(_) => None,
-                }
+                search_with_cache(title).await
             } else {
                 None
             };
@@ -175,10 +234,7 @@ async fn detect_anime_command() -> Result<String, String> {
             // This avoids catching empty media player windows
             if parsed.title.is_some() || parsed.episode.is_some() {
                 let anime_match = if let Some(ref title) = parsed.title {
-                    match anilist::search_anime(title, 1).await {
-                        Ok(results) => results.into_iter().next(),
-                        Err(_) => None,
-                    }
+                    search_with_cache(title).await
                 } else {
                     None
                 };
@@ -253,6 +309,7 @@ async fn progressive_search_command(title: String) -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_drpc::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_http::init())

@@ -148,7 +148,7 @@ pub async fn progressive_search_anime(
 }
 
 /// Represents an anime from AniList
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Anime {
     pub id: i32,
     pub title: AnimeTitle,
@@ -159,14 +159,14 @@ pub struct Anime {
     pub description: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnimeTitle {
     pub romaji: Option<String>,
     pub english: Option<String>,
     pub native: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverImage {
     pub large: Option<String>,
     pub medium: Option<String>,

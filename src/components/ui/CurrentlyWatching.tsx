@@ -68,7 +68,7 @@ function CurrentlyWatching() {
                                 backdropFilter: 'blur(10px)',
                                 cursor: 'pointer'
                             }}
-                            onClick={() => navigate(`/anime/details/${entry.media.id}`)}
+                            onClick={() => navigate(`/anime/${entry.media.id}`)}
                         >
                             {/* Poster Cover Image */}
                             <img
