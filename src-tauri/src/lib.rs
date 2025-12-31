@@ -14,11 +14,6 @@ mod title_parser;
 
 use tauri::{Emitter, Manager};
 
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 /// Tauri command to search for anime on AniList
 ///
 /// # Arguments
@@ -281,7 +276,6 @@ pub fn run() {
             }
         }))
         .invoke_handler(tauri::generate_handler![
-            greet,
             get_active_window,
             get_active_media_window,
             search_anime_command,

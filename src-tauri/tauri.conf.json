@@ -35,9 +35,11 @@
   },
   "plugins": {
     "deep-link": {
-      "schemes": [
-        "playon"
-      ]
+      "desktop": {
+        "schemes": [
+          "playon"
+        ]
+      }
     }
   }
 }
