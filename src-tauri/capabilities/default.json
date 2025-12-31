@@ -15,6 +15,7 @@
     "deep-link:default",
     "http:default",
     "dialog:default",
-    "shell:allow-open"
+    "shell:allow-open",
+    "process:default"
   ]
 }

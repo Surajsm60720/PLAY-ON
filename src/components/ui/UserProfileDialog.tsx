@@ -1,6 +1,8 @@
 import React from 'react';
 import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth';
+import { clearAllCache } from '../../lib/cacheUtils';
+import { relaunch } from '@tauri-apps/plugin-process';
 
 interface UserProfileDialogProps {
     isOpen: boolean;
@@ -138,6 +140,69 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({
                             Logout
                         </button>
                     )}
+
+                    {/* Divider */}
+                    <div style={{
+                        height: '1px',
+                        background: '#313338',
+                        margin: '0.5rem 0'
+                    }} />
+
+                    {/* Clear Cache Button */}
+                    <button
+                        onClick={async () => {
+                            await clearAllCache();
+                            window.location.reload();
+                        }}
+                        style={{
+                            padding: '0.75rem',
+                            background: 'transparent',
+                            color: '#949BA4',
+                            border: '1px solid #404249',
+                            borderRadius: '8px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            fontSize: '0.85rem',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(148, 155, 164, 0.1)';
+                            e.currentTarget.style.borderColor = '#949BA4';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.borderColor = '#404249';
+                        }}
+                    >
+                        🗑️ Clear Cache
+                    </button>
+
+                    {/* Clear & Restart Button */}
+                    <button
+                        onClick={async () => {
+                            await clearAllCache();
+                            await relaunch();
+                        }}
+                        style={{
+                            padding: '0.75rem',
+                            background: 'transparent',
+                            color: '#f0b232',
+                            border: '1px solid #f0b232',
+                            borderRadius: '8px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            fontSize: '0.85rem',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(240, 178, 50, 0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                        }}
+                    >
+                        🔄 Clear & Restart
+                    </button>
                 </div>
             </div>
 

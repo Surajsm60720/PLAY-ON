@@ -15,7 +15,7 @@ import { useLocalMedia } from '../context/LocalMediaContext';
 function Onboarding() {
     const navigate = useNavigate();
     const { login, isAuthenticated, user, loading: authLoading } = useAuthContext();
-    const { addFolder, folders } = useLocalMedia();
+    const { addFolder, folders, removeFolder } = useLocalMedia();
 
     // Local state for username if they skip login or want to set a local name
     const [localName, setLocalName] = useState('');
@@ -149,10 +149,16 @@ function Onboarding() {
                                     {folders.length > 0 ? (
                                         <div className="space-y-2 w-full">
                                             {folders.map(folder => (
-                                                <div key={folder.path} className="flex items-center gap-2 text-left bg-white/10 p-2 rounded">
+                                                <div key={folder.path} className="flex items-center gap-2 text-left bg-white/10 p-2 rounded group">
                                                     <span className="text-xl">📁</span>
                                                     <span className="text-sm text-white truncate flex-1">{folder.path}</span>
-                                                    <span className="text-xs text-green-400">Added</span>
+                                                    <button
+                                                        onClick={() => removeFolder(folder.path)}
+                                                        className="text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded p-1 transition-all opacity-0 group-hover:opacity-100"
+                                                        title="Remove folder"
+                                                    >
+                                                        ✕
+                                                    </button>
                                                 </div>
                                             ))}
                                         </div>
