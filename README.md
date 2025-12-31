@@ -1,133 +1,76 @@
 <div align="center">
   <img src="public/assets/app-icon.png" alt="PLAY-ON! Logo" width="120" />
   <h1>PLAY-ON!</h1>
-  <p><strong>🎬 Automatic Anime Tracking for Desktop</strong></p>
-  <p>Detects what you're watching and syncs progress to AniList — effortlessly.</p>
+  <p><strong>🎬 Simple Anime Tracking for Desktop</strong></p>
+  <p>A desktop application to help you keep track of what you're watching locally.</p>
 
   ![Tauri](https://img.shields.io/badge/Tauri-2.0-blue?logo=tauri)
   ![React](https://img.shields.io/badge/React-19-61dafb?logo=react)
   ![Rust](https://img.shields.io/badge/Rust-Backend-orange?logo=rust)
-  ![License](https://img.shields.io/badge/License-MIT-green)
 </div>
 
 ---
 
-## ✨ Features
+## 🛠️ Current Features
 
-- **🔍 Auto-Detection** — Detects anime playing in VLC, MPV, MPC, PotPlayer, and more
-- **📝 Smart Title Parsing** — Handles fansub formats, underscores, dots, season/episode patterns
-- **🔗 AniList Integration** — OAuth login and automatic progress sync
-- **💾 Local-First** — Saves progress locally first, syncs to cloud in background
-- **📴 Offline Support** — Queues updates when offline, syncs when reconnected
-- **🎨 Modern UI** — Beautiful pastel theme with smooth animations
+- **Media Detection** — Basic detection for media players like VLC and MPV on Windows.
+- **Title Parsing** — Attempts to grab anime titles and episode numbers from window titles.
+- **AniList Sync** — Connect your account to keep your list updated (requires setup).
+- **Local Library** — Keeps track of the folders you've added to the sidebar.
+- **Cache Management** — Options to clear all local data and restart the app.
 
-## 🖼️ Preview
+## 🚀 How to Run Exactly
 
-| Now Playing | Anime List |
-|-------------|------------|
-| Detects currently playing anime with cover art | Browse and filter your anime collection |
+To run this project on your own machine, follow these steps:
 
-## 🚀 Quick Start
+### 1. Prerequisites
+- **Node.js**: (v18 or newer)
+- **Rust**: [Install via rustup.rs](https://rustup.rs/)
+- **Tauri Prerequisites**: See the [Tauri Setup Guide](https://v2.tauri.app/start/prerequisites/) for your OS (Visual Studio C++ Build Tools for Windows).
 
-### Prerequisites
-- [Node.js](https://nodejs.org/) (v18+)
-- [Rust](https://rustup.rs/) (latest stable)
-- [Tauri Prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites)
-
-### Installation
+### 2. Setup Environment Variables
+Clone the repo and create a `.env` file in the root directory:
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/PLAY-ON.git
-cd PLAY-ON
+cp .env.example .env
+```
 
-# Install dependencies
+Open `.env` and fill in your AniList API credentials:
+- `VITE_ANILIST_CLIENT_ID`: Your AniList Developer Client ID
+- `VITE_ANILIST_CLIENT_SECRET`: Your AniList Developer Client Secret
+
+### 3. Install and Run
+Run the following commands in your terminal:
+
+```bash
+# Install Node dependencies
 npm install
 
 # Run in development mode
 npm run tauri dev
 ```
 
-### Build for Production
+### 4. Build for Production
+To create a standalone installer for your OS:
 
 ```bash
 npm run tauri build
 ```
 
-## 🔧 How It Works
+## 🔐 Notes on Connectivity
 
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐     ┌──────────────┐
-│  Media Player   │ ──▶ │  Window Title    │ ──▶ │  Title Parser   │ ──▶ │   AniList    │
-│  (VLC, MPV...)  │     │  Detection       │     │  + AniList API  │     │   Sync       │
-└─────────────────┘     └──────────────────┘     └─────────────────┘     └──────────────┘
-```
+The app uses custom protocol handling (`playon://`) for AniList login. If you have trouble logging in, use the **"Trouble logging in?"** link in the sidebar or onboarding page to paste your authorization code manually.
 
-1. **Detect** — Monitors active windows for media players
-2. **Parse** — Extracts anime title & episode from filename
-3. **Match** — Searches AniList progressively (word-by-word)
-4. **Save** — Updates local database instantly
-5. **Sync** — Pushes progress to AniList in background
+---
 
-## 📁 Project Structure
+## 🏗️ Project Stack
 
-```
-PLAY-ON!/
-├── src/                    # React Frontend
-│   ├── components/         # UI Components
-│   ├── lib/                # Core libraries
-│   │   ├── localAnimeDb.ts # Local storage database
-│   │   ├── syncService.ts  # AniList sync service
-│   │   └── apollo.ts       # GraphQL client
-│   └── pages/              # Route pages
-├── src-tauri/              # Rust Backend
-│   └── src/
-│       ├── lib.rs          # Tauri commands
-│       ├── title_parser.rs # Anime title parser
-│       ├── anilist.rs      # AniList API client
-│       └── media_player.rs # Player detection
-└── public/                 # Static assets
-```
-
-## 🎯 Supported Media Players
-
-| Player | Status |
-|--------|--------|
-| VLC Media Player | ✅ |
-| MPV | ✅ |
-| MPC-HC / MPC-BE | ✅ |
-| PotPlayer | ✅ |
-| KMPlayer | ✅ |
-| GOM Player | ✅ |
-| Windows Media Player | ✅ |
-
-## 🔐 AniList Setup
-
-1. Go to [AniList Developer Settings](https://anilist.co/settings/developer)
-2. Create a new client with redirect URL: `playon://auth`
-3. Add your Client ID and Secret to the app settings
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | React 19, TypeScript, Vite |
-| **Backend** | Rust, Tauri 2.0 |
-| **API** | Apollo Client, GraphQL |
-| **Styling** | CSS with pastel theme |
-| **Storage** | localStorage + AniList |
-
-## 📝 License
-
-MIT License — feel free to use and modify!
+- **Frontend**: React 19, Vite, Apollo Client (GraphQL)
+- **Backend**: Rust, Tauri 2.0
+- **Storage**: LocalStorage & AniList API
 
 ---
 
 <div align="center">
-  <p>Made with ❤️ for anime fans</p>
-  <p>
-    <a href="https://anilist.co">AniList</a> •
-    <a href="https://tauri.app">Tauri</a> •
-    <a href="https://react.dev">React</a>
-  </p>
+  <p>Experimental project for personal use.</p>
 </div>

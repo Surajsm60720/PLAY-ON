@@ -6,10 +6,8 @@ import { open } from '@tauri-apps/plugin-shell';
 import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
 import { listen } from '@tauri-apps/api/event';
 
-const ANILIST_CLIENT_ID = '33523';
-// Client Secret is required for Authorization Code Grant (standard given AniList Constraints)
-// User must provide this
-const ANILIST_CLIENT_SECRET = 'spCWPTMapryGIQwRZ3djJGSKtzCMXB8udNRyDwxX';
+const ANILIST_CLIENT_ID = import.meta.env.VITE_ANILIST_CLIENT_ID || '';
+const ANILIST_CLIENT_SECRET = import.meta.env.VITE_ANILIST_CLIENT_SECRET || '';
 
 interface UserProfile {
     id: number;
