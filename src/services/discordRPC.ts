@@ -32,22 +32,45 @@ const APP_ICON_ASSET = 'app_icon';
 // ============================================================================
 // STATE
 // ============================================================================
+// Connection state tracking
 let isInitialized = false;
+let isConnecting = false;
 let currentAnimeId: number | null = null;
 let watchStartTime: number | null = null;
+let retryTimeout: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Initialize Discord Rich Presence
  * Call this on app startup
  */
-export async function initDiscordRPC(): Promise<boolean> {
+export async function initDiscordRPC(retryCount = 0): Promise<boolean> {
+    if (isInitialized) return true;
+    if (isConnecting) return false;
+
+    isConnecting = true;
     try {
+        console.log(`[Discord RPC] Initializing... (Attempt ${retryCount + 1})`);
         await start(DISCORD_APPLICATION_ID);
         isInitialized = true;
+        isConnecting = false;
         console.log('[Discord RPC] Initialized successfully');
         return true;
     } catch (err) {
         console.error('[Discord RPC] Failed to initialize:', err);
+        isConnecting = false;
+
+        // Retry logic for "thread not found" or other startup errors
+        // This handles race conditions where stop() hasn't fully cleaned up yet
+        if (retryCount < 3) {
+            console.log(`[Discord RPC] Retrying in 1s...`);
+            return new Promise((resolve) => {
+                retryTimeout = setTimeout(async () => {
+                    const success = await initDiscordRPC(retryCount + 1);
+                    resolve(success);
+                }, 1000);
+            });
+        }
+
         return false;
     }
 }
@@ -57,9 +80,15 @@ export async function initDiscordRPC(): Promise<boolean> {
  * Call this on app close
  */
 export async function stopDiscordRPC(): Promise<void> {
+    if (retryTimeout) {
+        clearTimeout(retryTimeout);
+        retryTimeout = null;
+    }
+
     try {
         await stop();
         isInitialized = false;
+        isConnecting = false;
         currentAnimeId = null;
         watchStartTime = null;
         console.log('[Discord RPC] Stopped');
@@ -155,7 +184,8 @@ export async function updateAnimeActivity(params: {
         ]);
 
         await setActivity(activity);
-        console.log('[Discord RPC] Activity updated:', animeName, episode ? `Ep ${episode}` : '');
+        const logMsg = episode ? `Ep ${episode}${season ? ` S${season}` : ''}` : 'Activity updated';
+        console.log(`[Discord RPC] ${animeName} - ${logMsg}`);
     } catch (err) {
         console.error('[Discord RPC] Failed to update activity:', err);
     }

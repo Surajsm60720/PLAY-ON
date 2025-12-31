@@ -95,9 +95,11 @@ export function useDiscordRPC(enabled: boolean = true) {
 
                 // Only update if it's a different anime or we weren't watching before
                 const isDifferentAnime = lastDetectionRef.current?.anilistId !== newDetection.anilistId;
+                const isDifferentEpisode = lastDetectionRef.current?.episode !== newDetection.episode;
+                const isDifferentSeason = lastDetectionRef.current?.season !== newDetection.season;
                 const wasNotWatching = !isWatchingRef.current;
 
-                if (isDifferentAnime || wasNotWatching) {
+                if (isDifferentAnime || isDifferentEpisode || isDifferentSeason || wasNotWatching) {
                     lastDetectionRef.current = newDetection;
                     isWatchingRef.current = true;
 
@@ -154,6 +156,7 @@ export function useDiscordRPC(enabled: boolean = true) {
 
         // Cleanup on unmount
         return () => {
+            console.log('[useDiscordRPC] Cleanup triggered - stopping RPC');
             if (pollIntervalRef.current) {
                 clearInterval(pollIntervalRef.current);
                 pollIntervalRef.current = null;
