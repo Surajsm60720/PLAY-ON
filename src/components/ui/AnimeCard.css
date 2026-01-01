@@ -1,0 +1,149 @@
+/* AnimeCard.css - Styles for anime cards with inverted corner radius */
+
+.anime-card {
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.3s ease, z-index 0.3s ease;
+}
+
+.anime-card:hover {
+    transform: scale(1.05);
+    z-index: 10;
+}
+
+/* --- Progress Badge (Top Right Corner) --- */
+.anime-card__progress-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 25;
+    background: var(--color-content, #2e2e2e);
+    padding: 6px 12px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    border-bottom-left-radius: 12px;
+}
+
+/* Inverted corner connector - creates the smooth curve between badge and card edge */
+.anime-card__progress-badge::before {
+    content: '';
+    position: absolute;
+    bottom: 24px;
+    left: -16px;
+    width: 16px;
+    height: 16px;
+    background: transparent;
+    /* Radial gradient creates the inverted curve:
+       Circle at top-right of this element,
+       transparent inside the circle (the curve),
+       colored outside to match the badge background */
+    background: radial-gradient(circle at 0% 100%, transparent 16px, var(--color-content, #2e2e2e) 16px);
+}
+
+/* Inverted corner on the right side of badge (connects to card's right edge) */
+.anime-card__progress-badge::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: -4px;
+    width: 16px;
+    height: 16px;
+    background: transparent;
+    /* Circle at top-right, transparent inside, colored outside */
+    background: radial-gradient(circle at 0% 100%, transparent 16px, var(--color-content, #2e2e2e) 16px);
+}
+
+.anime-card__progress-current {
+    color: #C7B8EA;
+    /* Lavender highlight */
+}
+
+.anime-card__progress-separator {
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 1px;
+}
+
+.anime-card__progress-total {
+    color: #fff;
+}
+
+/* --- Image Wrapper --- */
+.anime-card__image-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* When there's progress, adjust the top-right corner */
+.anime-card__image-wrapper--notched {
+    border-top-right-radius: 0;
+}
+
+/* --- Image --- */
+.anime-card__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* --- Hover Overlay --- */
+.anime-card__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 1rem;
+}
+
+.anime-card:hover .anime-card__overlay {
+    opacity: 1;
+}
+
+.anime-card__title {
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.875rem;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    margin: 0;
+}
+
+.anime-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.anime-card__score {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #86EFAC;
+    /* Mint tonic */
+}
+
+.anime-card__format {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    color: #d1d5db;
+    border: 1px solid #6b7280;
+    padding: 1px 4px;
+    border-radius: 4px;
+}
