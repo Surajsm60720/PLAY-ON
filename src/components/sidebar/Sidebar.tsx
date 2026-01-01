@@ -5,7 +5,7 @@ import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
 import { useLocalMedia } from '../../context/LocalMediaContext';
 import SidebarItem from './SidebarItem';
-import { ListIcon, HistoryIcon, HomeIcon } from '../ui/Icons';
+import { ListIcon, HistoryIcon, HomeIcon, FolderIcon } from '../ui/Icons';
 import UserProfileDialog from '../ui/UserProfileDialog';
 
 interface SidebarNavItem {
@@ -110,7 +110,10 @@ function Sidebar({ width: _width }: SidebarProps) {
                             onMouseEnter={(e) => e.currentTarget.style.color = '#FFFFFF'}
                             onMouseLeave={(e) => e.currentTarget.style.color = '#949BA4'}
                         >
-                            📁 {item.label}
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FolderIcon size={16} />
+                                {item.label}
+                            </span>
                         </div>
                     ))}
 

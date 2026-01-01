@@ -44,10 +44,12 @@ function AnimeList() {
     const { user, isAuthenticated, loading: authLoading } = useAuth();
 
     // Use Apollo Query for automatic caching and loading state management
+    // pollInterval refreshes the list every 10 minutes (600000ms)
     const { data, loading: queryLoading, error: queryError } = useQuery(USER_ANIME_COLLECTION_QUERY, {
         variables: { userId: user?.id },
         skip: !user?.id,
-        fetchPolicy: 'cache-first', // Use cache if available, don't flash loading
+        fetchPolicy: 'cache-and-network', // Show cache immediately, update in background
+        pollInterval: 600000, // Refresh every 10 minutes
     });
 
     const [loading, setLoading] = useState(true); // Keep strictly for trending fallback logic
