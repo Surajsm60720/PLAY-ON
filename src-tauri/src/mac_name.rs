@@ -1,137 +1,231 @@
 //! macOS Window Detection Module
 //!
-//! PURPOSE: Detect window titles on macOS using AppleScript
+//! PURPOSE: Detect window titles on macOS using Core Graphics API
 //! Provides the same interface as win_name.rs for cross-platform compatibility
 //!
-//! NOTE: Requires Accessibility permissions for full functionality
+//! NOTE: Requires Screen Recording permission to see other app windows
 #![cfg(target_os = "macos")]
 
-use std::process::Command;
+use core_foundation::base::TCFType;
+use core_foundation::dictionary::CFDictionaryRef;
+use core_foundation::number::CFNumber;
+use core_foundation::string::CFString;
+use core_graphics::window::{
+    kCGNullWindowID, kCGWindowListExcludeDesktopElements, kCGWindowListOptionOnScreenOnly,
+    CGWindowListCopyWindowInfo,
+};
 
 /// Get the title of the currently active/frontmost window on macOS
 ///
-/// Uses AppleScript to query System Events for the frontmost application's
-/// active window title.
+/// Uses Core Graphics API to get window information.
+/// Falls back to getting any visible window title if frontmost can't be determined.
 ///
 /// # Returns
 /// * `Some(String)` - The window title if successfully retrieved
 /// * `None` - If no window is active or an error occurred
 pub fn get_active_window_title() -> Option<String> {
-    // AppleScript to get the frontmost window's name
-    let script = r#"
-        tell application "System Events"
-            set frontApp to first application process whose frontmost is true
-            try
-                set frontWindow to first window of frontApp
-                return name of frontWindow
-            on error
-                return name of frontApp
-            end try
-        end tell
-    "#;
+    let options = kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements;
 
-    let output = Command::new("osascript")
-        .arg("-e")
-        .arg(script)
-        .output()
-        .ok()?;
+    let window_list = unsafe { CGWindowListCopyWindowInfo(options, kCGNullWindowID) };
 
-    if output.status.success() {
-        let title = String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .to_string();
-        if title.is_empty() {
-            None
-        } else {
-            Some(title)
-        }
-    } else {
-        None
+    if window_list.is_null() {
+        return None;
     }
+
+    let windows: Vec<CFDictionaryRef> = unsafe {
+        let count = core_foundation::array::CFArrayGetCount(window_list as _);
+        (0..count)
+            .filter_map(|i| {
+                let ptr = core_foundation::array::CFArrayGetValueAtIndex(window_list as _, i);
+                if ptr.is_null() {
+                    None
+                } else {
+                    Some(ptr as CFDictionaryRef)
+                }
+            })
+            .collect()
+    };
+
+    // Find the frontmost window (layer 0, on screen)
+    // Windows are ordered front to back, so first valid window with a name is usually frontmost
+    for dict in windows.iter() {
+        if let Some(title) = get_window_name(*dict) {
+            if !title.is_empty() && title != "Notification Center" && title != "Control Center" {
+                // Check if this window belongs to a normal app (layer 0)
+                if let Some(layer) = get_window_layer(*dict) {
+                    if layer == 0 {
+                        // Clean up
+                        unsafe {
+                            core_foundation::base::CFRelease(window_list as _);
+                        }
+                        return Some(title);
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback: return the first window with any name
+    for dict in windows.iter() {
+        if let Some(title) = get_window_name(*dict) {
+            if !title.is_empty() && title != "Notification Center" && title != "Control Center" {
+                // Clean up
+                unsafe {
+                    core_foundation::base::CFRelease(window_list as _);
+                }
+                return Some(title);
+            }
+        }
+    }
+
+    // Clean up
+    unsafe {
+        core_foundation::base::CFRelease(window_list as _);
+    }
+
+    None
 }
 
-/// Get titles of all visible windows from common media players
+/// Get titles of all visible windows from common media players and browsers
 ///
-/// Queries each known media player application for their window titles.
-/// This is used as a fallback when the active window isn't a media player.
+/// Uses Core Graphics API to enumerate all visible windows and filter
+/// by owner application name.
 ///
 /// # Returns
-/// * `Vec<String>` - List of window titles from media player applications
+/// * `Vec<String>` - List of window titles from media player/browser applications
 pub fn get_all_visible_window_titles() -> Vec<String> {
     let mut titles = Vec::new();
-    
-    // List of common media players on macOS
-    let media_players = [
+
+    // Apps we're interested in
+    let target_apps: Vec<&str> = vec![
+        // Media players
         "VLC",
         "IINA",
         "mpv",
         "QuickTime Player",
         "Elmedia Player",
         "Infuse",
+        // Browsers
+        "Safari",
+        "Google Chrome",
+        "Firefox",
+        "Arc",
+        "Brave Browser",
+        "Microsoft Edge",
+        "Opera",
+        "Vivaldi",
+        "zen",
+        "Zen Browser",
+        "Zen",
     ];
 
-    for player in &media_players {
-        if let Some(window_titles) = get_app_window_titles(player) {
-            titles.extend(window_titles);
+    let options = kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements;
+
+    let window_list = unsafe { CGWindowListCopyWindowInfo(options, kCGNullWindowID) };
+
+    if window_list.is_null() {
+        return titles;
+    }
+
+    let windows: Vec<CFDictionaryRef> = unsafe {
+        let count = core_foundation::array::CFArrayGetCount(window_list as _);
+        (0..count)
+            .filter_map(|i| {
+                let ptr = core_foundation::array::CFArrayGetValueAtIndex(window_list as _, i);
+                if ptr.is_null() {
+                    None
+                } else {
+                    Some(ptr as CFDictionaryRef)
+                }
+            })
+            .collect()
+    };
+
+    for dict in windows.iter() {
+        if let Some(owner) = get_window_owner_name(*dict) {
+            // Check if this is one of our target apps
+            let is_target = target_apps
+                .iter()
+                .any(|app| owner.to_lowercase().contains(&app.to_lowercase()));
+
+            if is_target {
+                if let Some(title) = get_window_name(*dict) {
+                    if !title.is_empty() {
+                        titles.push(title);
+                    }
+                }
+            }
         }
+    }
+
+    // Clean up
+    unsafe {
+        core_foundation::base::CFRelease(window_list as _);
     }
 
     titles
 }
 
-/// Get window titles for a specific application
-///
-/// # Arguments
-/// * `app_name` - The name of the application to query
-///
-/// # Returns
-/// * `Some(Vec<String>)` - List of window titles for the application
-/// * `None` - If the application isn't running or an error occurred
-fn get_app_window_titles(app_name: &str) -> Option<Vec<String>> {
-    // AppleScript to get all window names from a specific application
-    let script = format!(r#"
-        tell application "System Events"
-            if exists (process "{}") then
-                tell process "{}"
-                    set windowNames to {{}}
-                    repeat with w in windows
-                        set end of windowNames to name of w
-                    end repeat
-                    return windowNames
-                end tell
-            end if
-        end tell
-    "#, app_name, app_name);
+/// Extract window name from a Core Foundation dictionary
+fn get_window_name(dict: CFDictionaryRef) -> Option<String> {
+    unsafe {
+        let key = CFString::new("kCGWindowName");
+        let mut value: *const std::ffi::c_void = std::ptr::null();
 
-    let output = Command::new("osascript")
-        .arg("-e")
-        .arg(&script)
-        .output()
-        .ok()?;
-
-    if output.status.success() {
-        let raw_output = String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .to_string();
-        
-        // Parse AppleScript list output (e.g., "title1, title2, title3")
-        if raw_output.is_empty() {
-            return None;
-        }
-        
-        let titles: Vec<String> = raw_output
-            .split(", ")
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
-        
-        if titles.is_empty() {
-            None
+        if core_foundation::dictionary::CFDictionaryGetValueIfPresent(
+            dict,
+            key.as_concrete_TypeRef() as *const _,
+            &mut value,
+        ) != 0
+            && !value.is_null()
+        {
+            let cf_string = CFString::wrap_under_get_rule(value as _);
+            Some(cf_string.to_string())
         } else {
-            Some(titles)
+            None
         }
-    } else {
-        None
+    }
+}
+
+/// Extract window owner (application) name from a Core Foundation dictionary
+fn get_window_owner_name(dict: CFDictionaryRef) -> Option<String> {
+    unsafe {
+        let key = CFString::new("kCGWindowOwnerName");
+        let mut value: *const std::ffi::c_void = std::ptr::null();
+
+        if core_foundation::dictionary::CFDictionaryGetValueIfPresent(
+            dict,
+            key.as_concrete_TypeRef() as *const _,
+            &mut value,
+        ) != 0
+            && !value.is_null()
+        {
+            let cf_string = CFString::wrap_under_get_rule(value as _);
+            Some(cf_string.to_string())
+        } else {
+            None
+        }
+    }
+}
+
+/// Extract window layer from a Core Foundation dictionary
+fn get_window_layer(dict: CFDictionaryRef) -> Option<i32> {
+    unsafe {
+        let key = CFString::new("kCGWindowLayer");
+        let mut value: *const std::ffi::c_void = std::ptr::null();
+
+        if core_foundation::dictionary::CFDictionaryGetValueIfPresent(
+            dict,
+            key.as_concrete_TypeRef() as *const _,
+            &mut value,
+        ) != 0
+            && !value.is_null()
+        {
+            let cf_num = CFNumber::wrap_under_get_rule(value as _);
+            cf_num.to_i32()
+        } else {
+            None
+        }
     }
 }
 
@@ -140,17 +234,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_active_window_returns_result() {
-        // This test just verifies the function doesn't panic
-        // Actual return value depends on system state
-        let _result = get_active_window_title();
+    fn test_get_active_window_title() {
+        // This test will return Some if there's a visible window
+        let title = get_active_window_title();
+        println!("Active window title: {:?}", title);
+        // We can't assert much since it depends on what's on screen
     }
 
     #[test]
-    fn test_get_all_visible_windows() {
-        // This test just verifies the function doesn't panic
+    fn test_get_all_visible_window_titles() {
         let titles = get_all_visible_window_titles();
-        // Should return empty vec if no media players are running
-        assert!(titles.len() >= 0);
+        println!("Visible window titles: {:?}", titles);
+        // We can't assert specific values since it depends on running apps
     }
 }

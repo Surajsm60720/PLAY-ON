@@ -96,17 +96,25 @@ fn get_active_media_window() -> String {
 
     // Get active window title
     let title = match platform_window::get_active_window_title() {
-        Some(t) => t,
-        None => return "No active window".to_string(),
+        Some(t) => {
+            println!("[DEBUG] Active window title: {:?}", t);
+            t
+        }
+        None => {
+            println!("[DEBUG] No active window found");
+            return "No active window".to_string();
+        }
     };
 
     // Check if it's a media player
     match detect_media_player(&title) {
         Some(player) => {
+            println!("[DEBUG] Detected media player: {:?}", player);
             // Return structured info
             format!("{:?}: {}", player, title)
         }
         None => {
+            println!("[DEBUG] Not a media player: {}", title);
             // Not a media player - ignore
             "No media playing".to_string()
         }
@@ -211,14 +219,25 @@ async fn detect_anime_command() -> Result<String, String> {
 
     // 1. Try active window first
     let active_title = platform_window::get_active_window_title();
+    println!("[Detection] Active window title: {:?}", active_title);
+
     if let Some(ref window_title) = active_title {
-        if let Some(player) = media_player::detect_media_player(window_title) {
+        let player_result = media_player::detect_media_player(window_title);
+        println!("[Detection] Media player detected: {:?}", player_result);
+
+        if let Some(player) = player_result {
             let parsed = title_parser::parse_window_title(window_title);
+            println!(
+                "[Detection] Parsed result: title={:?}, episode={:?}",
+                parsed.title, parsed.episode
+            );
+
             let anime_match = if let Some(ref title) = parsed.title {
                 search_with_cache(title).await
             } else {
                 None
             };
+            println!("[Detection] AniList match found: {}", anime_match.is_some());
 
             return Ok(json!({
                 "status": "detected",
@@ -237,9 +256,21 @@ async fn detect_anime_command() -> Result<String, String> {
 
     // 2. If active window isn't a media player, search ALL visible windows
     let all_titles = platform_window::get_all_visible_window_titles();
+    println!(
+        "[Detection] Fallback: searching {} visible windows",
+        all_titles.len()
+    );
+    for (i, title) in all_titles.iter().enumerate() {
+        println!("[Detection] Window {}: {:?}", i, title);
+    }
+
     for window_title in all_titles {
         if let Some(player) = media_player::detect_media_player(&window_title) {
             let parsed = title_parser::parse_window_title(&window_title);
+            println!(
+                "[Detection] Fallback found browser: {:?}, parsed title={:?}, ep={:?}",
+                player, parsed.title, parsed.episode
+            );
 
             // Only count as "detected" if we actually parsed a title or episode
             // This avoids catching empty media player windows
