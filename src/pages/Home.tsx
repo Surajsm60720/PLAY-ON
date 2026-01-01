@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageTransition } from '../components/ui/UIComponents';
 import AnimeCard from '../components/ui/AnimeCard';
-import NowPlaying from '../components/ui/NowPlaying';
 import { useAuth } from '../hooks/useAuth';
 import { useQuery } from '@apollo/client';
 import { USER_MEDIA_LIST_QUERY, TRENDING_ANIME_QUERY } from '../api/anilistClient';
@@ -135,11 +134,6 @@ function Home() {
                             <p className="text-text-secondary">No anime found in your list.</p>
                         </div>
                     )}
-                </div>
-
-                {/* Now Playing Section - Enhanced with anime detection */}
-                <div style={{ marginBottom: '2rem' }}>
-                    <NowPlaying />
                 </div>
             </div>
         </PageTransition>

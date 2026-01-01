@@ -6,6 +6,7 @@ import TabNavigation from '../components/ui/TabNavigation';
 import SearchBar from '../components/ui/SearchBar';
 import Breadcrumbs from '../components/ui/Breadcrumbs';
 import StatusBar from '../components/ui/StatusBar';
+import FloatingNowPlaying from '../components/ui/FloatingNowPlaying';
 
 /**
  * MainLayout Component
@@ -131,6 +132,9 @@ function MainLayout() {
                     </div>
                 </div>
             </div>
+
+            {/* Floating Now Playing Pill - Global overlay */}
+            <FloatingNowPlaying />
         </div>
     );
 }
