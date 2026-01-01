@@ -178,9 +178,10 @@ export async function updateAnimeActivity(params: {
 
         activity = activity.setAssets(assets);
 
-        // Add button to view on AniList
+        // Add buttons - Discord allows max 2 buttons
         activity = activity.setButton([
-            new Button('View on AniList', `https://anilist.co/anime/${anilistId}`)
+            new Button('View on AniList', `https://anilist.co/anime/${anilistId}`),
+            new Button('GitHub', 'https://github.com/MemestaVedas/PLAY-ON')
         ]);
 
         await setActivity(activity);
@@ -213,6 +214,11 @@ export async function setBrowsingActivity(): Promise<void> {
             .setLargeText('PLAY-ON!');
 
         activity = activity.setAssets(assets);
+
+        // Add GitHub button for browsing mode
+        activity = activity.setButton([
+            new Button('GitHub', 'https://github.com/MemestaVedas/PLAY-ON')
+        ]);
 
         await setActivity(activity);
         currentAnimeId = null;

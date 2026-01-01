@@ -16,6 +16,11 @@
 - **Media Detection** — Basic detection for media players like VLC and MPV on Windows.
 - **Title Parsing** — Attempts to grab anime titles and episode numbers from window titles.
 - **AniList Sync** — Connect your account to keep your list updated (requires setup).
+- **Discord Rich Presence** — Show what you're watching on Discord with:
+  - Anime cover art from AniList
+  - Episode progress display
+  - "View on AniList" button (when matched)
+  - "GitHub" button linking to this repo
 - **Local Library** — Keeps track of the folders you've added to the sidebar.
 - **Cache Management** — Options to clear all local data and restart the app.
 
