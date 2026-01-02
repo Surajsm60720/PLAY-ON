@@ -224,6 +224,10 @@ query ($id: Int) {
              large
              medium
            }
+           episodes
+           averageScore
+           format
+           status
         }
       }
     }

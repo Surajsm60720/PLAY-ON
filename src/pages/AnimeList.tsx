@@ -48,28 +48,56 @@ function AnimeList() {
     const { data, loading: queryLoading, error: queryError } = useQuery(USER_ANIME_COLLECTION_QUERY, {
         variables: { userId: user?.id },
         skip: !user?.id,
-        fetchPolicy: 'cache-first',
+        fetchPolicy: 'cache-first', // Fast load from cache if available
+        nextFetchPolicy: 'cache-first', // Ensure we don't hit network unnecessarily on navigation
         pollInterval: 600000, // Refresh every 10 minutes
     });
-
-    const [loading, setLoading] = useState(true); // Keep strictly for trending fallback logic
-    const [fullAnimeList, setFullAnimeList] = useState<AnimeEntry[]>([]);
 
     // Initialize status from URL if present
     const initialStatus = (searchParams.get('status') as ListStatus) || 'All';
     const [selectedStatus, setSelectedStatus] = useState<ListStatus>(initialStatus);
-
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-    useEffect(() => {
-        // If we are loading user data via Apollo, sync it to state
-        if (queryLoading) {
-            setLoading(true);
-            return;
-        }
+    // Trending fallback state (only used if not authenticated)
+    const [trendingList, setTrendingList] = useState<AnimeEntry[]>([]);
+    const [trendingLoading, setTrendingLoading] = useState(false);
 
+    // Effect to load trending only if NOT authenticated
+    useEffect(() => {
+        if (!isAuthenticated && !authLoading) {
+            const loadTrending = async () => {
+                setTrendingLoading(true);
+                try {
+                    const tData = await fetchTrendingAnime();
+                    if (tData.data?.Page?.media) {
+                        // Map trending data to AnimeEntry structure
+                        const mappedTrending = tData.data.Page.media.map((m: any) => ({
+                            id: m.id,
+                            status: 'TRENDING',
+                            score: m.averageScore || 0,
+                            progress: 0,
+                            media: m
+                        }));
+                        setTrendingList(mappedTrending);
+                    }
+                } catch (e) { console.error(e); }
+                setTrendingLoading(false);
+            };
+            loadTrending();
+        }
+    }, [isAuthenticated, authLoading]);
+
+    // Update selected status when URL param switches (e.g. navigation from Home)
+    useEffect(() => {
+        const statusFromUrl = (searchParams.get('status') as ListStatus);
+        if (statusFromUrl) {
+            setSelectedStatus(statusFromUrl);
+        }
+    }, [searchParams]);
+
+    // DERIVE LIST DIRECTLY FROM DATA (No useEffect syncing -> No Flash)
+    const fullAnimeList = useMemo(() => {
         if (isAuthenticated && data?.MediaListCollection?.lists) {
-            setLoading(false);
             const lists = data.MediaListCollection.lists;
             // Flatten all lists into one array
             const allEntries = lists.flatMap((list: any) => list.entries);
@@ -81,26 +109,19 @@ function AnimeList() {
                     uniqueEntriesMap.set(entry.id, entry);
                 }
             });
-            const uniqueEntries = Array.from(uniqueEntriesMap.values());
-
-            setFullAnimeList(uniqueEntries as AnimeEntry[]);
-        } else if (!isAuthenticated && !authLoading) {
-            // Fallback to trending if not logged in
-            const loadTrending = async () => {
-                setLoading(true);
-                try {
-                    const tData = await fetchTrendingAnime();
-                    if (tData.data?.Page?.media) {
-                        setFullAnimeList([]);
-                    }
-                } catch (e) { }
-                setLoading(false);
-            };
-            loadTrending();
-        } else if (data && !data.MediaListCollection) {
-            setLoading(false); // Loaded but no lists?
+            return Array.from(uniqueEntriesMap.values()) as AnimeEntry[];
         }
-    }, [data, queryLoading, isAuthenticated, authLoading]);
+
+        // Fallback to trending if not authenticated
+        if (!isAuthenticated) return trendingList;
+
+        return [];
+    }, [isAuthenticated, data, trendingList]);
+
+    // Loading state calculation
+    // If authenticated: loading is strictly queryLoading
+    // If not authenticated: loading is authLoading or trendingLoading
+    const isLoading = isAuthenticated ? queryLoading : (authLoading || trendingLoading);
 
     const error = queryError ? "Failed to fetch anime list." : null;
 
@@ -166,7 +187,7 @@ function AnimeList() {
     }, [fullAnimeList, selectedStatus, searchQuery]);
 
 
-    if (authLoading || loading) {
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center h-full text-text-secondary">
                 <div className="animate-pulse">Loading Anime List...</div>
@@ -257,6 +278,17 @@ function AnimeList() {
                                 </button>
                             )
                         })}
+                    </div>
+
+                    {/* Refresh Button */}
+                    <div className="flex items-center pl-2 border-l border-white/10">
+                        <button
+                            onClick={() => data?.refetch && data.refetch()}
+                            className={`p-2 rounded-full transition-all text-white/40 hover:text-white hover:bg-white/5 ${queryLoading ? 'animate-spin text-white' : ''}`}
+                            title="Refresh List"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        </button>
                     </div>
 
                     {/* View Toggle - Divider included */}

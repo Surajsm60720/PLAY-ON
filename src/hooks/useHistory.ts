@@ -28,6 +28,7 @@ export function useHistory() {
     const { data, loading, error } = useQuery(USER_ACTIVITY_QUERY, {
         variables: { userId: user?.id, perPage: 50 },
         skip: !user?.id,
+
         fetchPolicy: 'cache-first',
     });
 
@@ -87,6 +88,7 @@ export function useHistory() {
         historyGroups,
         flatHistory,
         loading,
+        refetch: data?.refetch,
         error: error ? error.message : null
     };
 }

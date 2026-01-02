@@ -173,23 +173,26 @@ interface SectionHeaderProps {
     title: string;
     subtitle?: string;
     icon?: string;
+    className?: string;
 }
 
-export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle, icon }) => {
+export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle, icon, className = '' }) => {
     return (
         <div style={{ marginBottom: '2rem' }}>
-            <h2 style={{
-                fontSize: '2rem',
-                fontWeight: '700',
-                color: '#fff',
-                marginBottom: '0.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                fontFamily: 'var(--font-rounded)',
-                letterSpacing: '-0.02em',
-                textShadow: '0 2px 10px rgba(0,0,0,0.3)',
-            }}>
+            <h2
+                className={className}
+                style={{
+                    fontSize: '2rem',
+                    fontWeight: '700',
+                    color: '#fff',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    fontFamily: className ? undefined : 'var(--font-rounded)',
+                    letterSpacing: '-0.02em',
+                    textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                }}>
                 {icon && <span style={{ fontSize: '2rem', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.2))' }}>{icon}</span>}
                 {title}
             </h2>

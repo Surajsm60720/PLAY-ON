@@ -4,9 +4,9 @@ import { useHistory, HistoryFlatItem } from '../hooks/useHistory';
 import { Virtuoso } from 'react-virtuoso';
 
 function History() {
-    const { flatHistory, loading, error } = useHistory();
+    const { flatHistory, loading, error, refetch } = useHistory();
 
-    if (loading) {
+    if (loading && flatHistory.length === 0) {
         return (
             <div className="max-w-[1000px] mx-auto p-8 text-center text-text-secondary">
                 <div className="animate-pulse">Loading watch history...</div>
@@ -25,12 +25,19 @@ function History() {
 
     return (
         <div className="h-full flex flex-col max-w-[1000px] mx-auto px-6">
-            <div className="pt-4 pb-2">
+            <div className="pt-4 pb-2 flex justify-between items-center">
                 <SectionHeader
                     title="Watch History"
                     subtitle="Your recent anime viewing activity"
-                    icon="🕒"
+                    className="font-planet tracking-[0.2em] text-[#B4A2F6]"
                 />
+                <button
+                    onClick={() => refetch && refetch()}
+                    className={`p-2 rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all ${loading ? 'animate-spin text-white' : ''}`}
+                    title="Refresh History"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                </button>
             </div>
 
             <div className="flex-1 min-h-0">

@@ -372,9 +372,10 @@ export function FloatingNowPlaying({ onAnimeDetected }: FloatingNowPlayingProps)
                                 )}
                             </span>
                         )}
-                        {detection?.player && (
-                            <span className="floating-player">{detection.player}</span>
-                        )}
+                        {detection?.player &&
+                            !['Generic', 'GENERIC', 'Local Folder'].includes(detection.player) && (
+                                <span className="floating-player">{detection.player}</span>
+                            )}
                     </div>
                 </div>
 

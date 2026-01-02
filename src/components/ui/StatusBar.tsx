@@ -1,6 +1,21 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { getVersion } from '@tauri-apps/api/app';
 
 const StatusBar: React.FC = () => {
+    const [appVersion, setAppVersion] = useState<string>('0.0.0');
+
+    useEffect(() => {
+        async function fetchVersion() {
+            try {
+                const ver = await getVersion();
+                setAppVersion(ver);
+            } catch (error) {
+                console.error('Failed to get app version:', error);
+            }
+        }
+        fetchVersion();
+    }, []);
+
     return (
         <div className="absolute bottom-0 right-8 z-20">
             {/* The Tab itself */}
@@ -24,7 +39,7 @@ const StatusBar: React.FC = () => {
                         <span className="text-text-secondary">Online</span>
                     </div>
                     <span className="text-text-secondary opacity-30">|</span>
-                    <span className="text-text-secondary">v0.1.2</span>
+                    <span className="text-text-secondary">v{appVersion}</span>
                 </div>
             </div>
         </div>

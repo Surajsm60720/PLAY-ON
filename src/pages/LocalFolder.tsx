@@ -6,6 +6,7 @@ import Folder from '../components/ui/Folder';
 import AniListSearchDialog from '../components/ui/AniListSearchDialog';
 import { useFolderMappings } from '../hooks/useFolderMappings';
 import { useNowPlaying } from '../context/NowPlayingContext';
+import { useAnimeData } from '../hooks/useAnimeData';
 
 interface FileItem {
     name: string;
@@ -57,12 +58,16 @@ function LocalFolder() {
     const [error, setError] = useState<string | null>(null);
     const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [watchedProgress, setWatchedProgress] = useState<number>(0);
 
     // Folder-to-AniList mapping hook
     const { getMappingByPath, addMapping, removeMapping } = useFolderMappings();
 
     // Now Playing context to trigger manual sessions
     const { startManualSession } = useNowPlaying();
+
+    // Anime Data hook
+    const { getAnimeDetails } = useAnimeData();
 
     // Decode the path from URL
     const currentPath = folderPath ? decodeURIComponent(folderPath) : '';
@@ -91,6 +96,28 @@ function LocalFolder() {
         loadFiles();
     }, [currentPath]);
 
+    // Fetch watched progress if mapped
+    useEffect(() => {
+        async function fetchProgress() {
+            if (currentMapping?.anilistId) {
+                try {
+                    const details = await getAnimeDetails(currentMapping.anilistId);
+                    if (details?.mediaListEntry?.progress) {
+                        setWatchedProgress(details.mediaListEntry.progress);
+                    } else {
+                        setWatchedProgress(0);
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch anime progress:", err);
+                }
+            } else {
+                setWatchedProgress(0);
+            }
+        }
+        fetchProgress();
+    }, [currentMapping, getAnimeDetails]);
+
+
     const handleItemClick = async (item: FileItem) => {
         if (item.is_dir) {
             // Navigate into subdirectory
@@ -106,14 +133,25 @@ function LocalFolder() {
                     const videoExts = ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm'];
 
                     if (videoExts.includes(ext || '')) {
-                        // Parse episode number from filename
-                        // Patterns: E10, EP10, Episode 10, - 10, 10.mkv, etc.
-                        const episodeMatch = item.name.match(
-                            /(?:E|EP|Episode\s*)?(\d{1,3})(?:\s*v\d)?(?:\s*[\[\(\-]|\s*\.\w{3,4}$)/i
-                        );
-                        const episode = episodeMatch ? parseInt(episodeMatch[1], 10) : 1;
+                        // Parse episode number using multi-pass strategy
+                        const parseEpisode = (filename: string): number | null => {
+                            const patterns = [
+                                /[sS]\d+[eE](\d+)/,                 // S01E01
+                                /\d+x(\d+)/,                        // 1x01
+                                /(?:^|[_\W])(?:E|EP|Episode)\.?\s*(\d+)/i,  // E01, EP01, Episode 1
+                                /(?:^|[\s_\-\(\[])(\d{1,3})(?:v\d)?(?:[\s_\-\)\]\.]|$)/ // - 01 -, [01], _01_, 01.mkv
+                            ];
 
-                        console.log(`[LocalFolder] Starting Now Playing session: ${currentMapping.animeName} Ep ${episode}`);
+                            for (const pattern of patterns) {
+                                const match = filename.match(pattern);
+                                if (match && match[1]) {
+                                    return parseInt(match[1], 10);
+                                }
+                            }
+                            return null;
+                        };
+
+                        const episode = parseEpisode(item.name) || 1;
 
                         // Trigger the Now Playing session via context
                         startManualSession({
@@ -170,6 +208,41 @@ function LocalFolder() {
         <div key="2" className="w-full h-full bg-gray-300 flex items-center justify-center text-xs text-gray-600">📁</div>,
         <div key="3" className="w-full h-full bg-gray-200 flex items-center justify-center text-xs text-gray-500">📄</div>
     ];
+
+    // Helper to check if file is watched
+    const isFileWatched = (filename: string): boolean => {
+        if (!currentMapping || watchedProgress === 0) return false;
+
+        const ext = filename.split('.').pop()?.toLowerCase();
+        const videoExts = ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm'];
+
+        if (!videoExts.includes(ext || '')) return false;
+
+        const parseEpisode = (fname: string): number | null => {
+            const patterns = [
+                /[sS]\d+[eE](\d+)/,                 // S01E01
+                /\d+x(\d+)/,                        // 1x01
+                /(?:^|[_\W])(?:E|EP|Episode)\.?\s*(\d+)/i,  // E01, EP01, Episode 1
+                /(?:^|[\s_\-\(\[])(\d{1,3})(?:v\d)?(?:[\s_\-\)\]\.]|$)/ // - 01 -, [01], _01_, 01.mkv
+            ];
+
+            for (const pattern of patterns) {
+                const match = fname.match(pattern);
+                if (match && match[1]) {
+                    return parseInt(match[1], 10);
+                }
+            }
+            return null;
+        };
+
+        const episode = parseEpisode(filename);
+
+        if (episode !== null) {
+            return episode <= watchedProgress;
+        }
+
+        return false;
+    };
 
     return (
         <div className="max-w-[1400px] mx-auto pb-10 px-6 min-h-screen">
@@ -309,45 +382,50 @@ function LocalFolder() {
                         FILES
                     </h3>
                     <div className="flex flex-col gap-2">
-                        {regularFiles.map((file, index) => (
-                            <div
-                                key={file.path}
-                                onClick={() => handleItemClick(file)}
-                                className="group grid grid-cols-[40px_1fr_120px_100px] gap-4 items-center p-4 rounded-xl cursor-pointer transition-all duration-300 border border-transparent hover:border-white/10 hover:bg-white/5"
-                                style={{
-                                    background: index % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)'
-                                }}
-                            >
-                                {/* Icon */}
-                                <div className="text-2xl text-center opacity-70 group-hover:opacity-100 transition-opacity">
-                                    {getFileIcon(file.name)}
-                                </div>
-
-                                {/* Name */}
+                        {regularFiles.map((file, index) => {
+                            const isWatched = isFileWatched(file.name);
+                            return (
                                 <div
-                                    className="font-medium text-white/80 group-hover:text-white truncate transition-colors"
-                                    style={{ fontFamily: 'var(--font-rounded)' }}
+                                    key={file.path}
+                                    onClick={() => handleItemClick(file)}
+                                    className={`group grid grid-cols-[40px_1fr_120px_100px] gap-4 items-center p-4 rounded-xl cursor-pointer transition-all duration-300 border border-transparent hover:border-white/10 hover:bg-white/5 
+                                        ${isWatched ? 'opacity-40 grayscale hover:opacity-100 hover:grayscale-0' : ''}`}
+                                    style={{
+                                        background: index % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)'
+                                    }}
                                 >
-                                    {file.name}
-                                </div>
+                                    {/* Icon */}
+                                    <div className="text-2xl text-center opacity-70 group-hover:opacity-100 transition-opacity">
+                                        {getFileIcon(file.name)}
+                                    </div>
 
-                                {/* Date */}
-                                <div
-                                    className="text-sm text-white/30 group-hover:text-white/50 transition-colors"
-                                    style={{ fontFamily: 'var(--font-mono)' }}
-                                >
-                                    {formatDate(file.last_modified)}
-                                </div>
+                                    {/* Name */}
+                                    <div
+                                        className="font-medium text-white/80 group-hover:text-white truncate transition-colors"
+                                        style={{ fontFamily: 'var(--font-rounded)' }}
+                                    >
+                                        {file.name}
+                                        {isWatched && <span className="ml-2 text-xs text-brand-green bg-brand-green/10 px-1.5 py-0.5 rounded">WATCHED</span>}
+                                    </div>
 
-                                {/* Size */}
-                                <div
-                                    className="text-sm text-white/30 group-hover:text-white/50 text-right transition-colors"
-                                    style={{ fontFamily: 'var(--font-mono)' }}
-                                >
-                                    {formatSize(file.size)}
+                                    {/* Date */}
+                                    <div
+                                        className="text-sm text-white/30 group-hover:text-white/50 transition-colors"
+                                        style={{ fontFamily: 'var(--font-mono)' }}
+                                    >
+                                        {formatDate(file.last_modified)}
+                                    </div>
+
+                                    {/* Size */}
+                                    <div
+                                        className="text-sm text-white/30 group-hover:text-white/50 text-right transition-colors"
+                                        style={{ fontFamily: 'var(--font-mono)' }}
+                                    >
+                                        {formatSize(file.size)}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
