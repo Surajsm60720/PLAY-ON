@@ -73,7 +73,7 @@ function AnimeDetails() {
             <div className="fixed inset-0 z-0 select-none pointer-events-none">
                 {/* Blurred Hero Background */}
                 <div
-                    className="absolute inset-0 bg-cover bg-center blur-3xl opacity-20 scale-110"
+                    className="absolute -inset-10 bg-cover bg-top blur-3xl opacity-20 scale-125"
                     style={{ backgroundImage: `url(${heroImage})` }}
                 />
                 {/* Mesh Gradient Overlay */}

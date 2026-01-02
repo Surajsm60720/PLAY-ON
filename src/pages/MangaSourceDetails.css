@@ -46,18 +46,18 @@
 /* Hero Section */
 .hero-section {
     position: relative;
-    padding: 3rem 2rem 2rem;
-    margin: -2rem -2rem 2rem;
+    padding: 6rem 2rem 2rem;
+    margin: -6rem -2rem 2rem;
     overflow: hidden;
 }
 
 .hero-bg {
     position: absolute;
-    inset: 0;
+    inset: -20px;
     background-size: cover;
-    background-position: center;
+    background-position: top;
     filter: blur(40px) brightness(0.3);
-    transform: scale(1.2);
+    transform: scale(1.1);
     z-index: 0;
 }
 
