@@ -1,83 +1,87 @@
 <div align="center">
-  <img src="public/assets/app-icon.png" alt="PLAY-ON! Logo" width="120" />
+  <img src="public/assets/app-icon.png" alt="PLAY-ON! Logo" width="128" />
   <h1>PLAY-ON!</h1>
-  <p><strong>🎬 Simple Anime Tracking for Desktop</strong></p>
-  <p>A desktop application to help you keep track of what you're watching locally.</p>
+  <p><strong>The Ultimate Desktop Companion for Anime & Manga</strong></p>
+  <p>Seamlessly track local anime playback, sync with AniList, and read manga—all in one beautiful app.</p>
 
-  ![Tauri](https://img.shields.io/badge/Tauri-2.0-blue?logo=tauri)
-  ![React](https://img.shields.io/badge/React-19-61dafb?logo=react)
-  ![Rust](https://img.shields.io/badge/Rust-Backend-orange?logo=rust)
+  <p>
+    <a href="https://tauri.app">
+      <img src="https://img.shields.io/badge/Built_with-Tauri_2.0-blue?style=flat-square&logo=tauri" alt="Tauri" />
+    </a>
+    <a href="https://react.dev">
+      <img src="https://img.shields.io/badge/Frontend-React_19-cyan?style=flat-square&logo=react" alt="React" />
+    </a>
+    <a href="https://www.rust-lang.org">
+      <img src="https://img.shields.io/badge/Backend-Rust-orange?style=flat-square&logo=rust" alt="Rust" />
+    </a>
+  </p>
 </div>
 
 ---
 
-## 🛠️ Current Features
+## Overview
 
-[View Changelog](./CHANGELOG.md)
+**PLAY-ON!** is a modern desktop application designed to bridge the gap between your local media library and your online anime tracking. By detecting what you're watching in players like **VLC** or **MPV**, it automatically updates your **AniList** progress, keeping your watch history perfectly in sync without manual input.
 
-- **Media Detection** — Basic detection for media players like VLC and MPV on Windows.
-- **Title Parsing** — Attempts to grab anime titles and episode numbers from window titles.
-- **AniList Sync** — Connect your account to keep your list updated (requires setup).
-- **Discord Rich Presence** — Show what you're watching on Discord with:
-  - Anime cover art from AniList
-  - Episode progress display
-  - "View on AniList" button (when matched)
-  - "GitHub" button linking to this repo
-- **Local Library** — Keeps track of the folders you've added to the sidebar.
-- **Cache Management** — Options to clear all local data and restart the app.
+With **v0.2.0**, PLAY-ON! expands into a full-featured entertainment hub with the addition of a built-in **Manga Reader** and a comprehensive **Settings** system.
 
-## 🚀 How to Run Exactly
+## Key Features
 
-To run this project on your own machine, follow these steps:
+### 🎬 Automatic Anime Tracking
+- **Smart Detection**: automatically recognizes anime titles and episode numbers from your media player's window title.
+- **Background Sync**: Updates your AniList status to "Watching" and increments episode counts as you finish them.
+- **Supported Players**: Optimized for VLC Media Player, MPV, and MPC-HC.
 
-### 1. Prerequisites
-- **Node.js**: (v18 or newer)
-- **Rust**: [Install via rustup.rs](https://rustup.rs/)
-- **Tauri Prerequisites**: See the [Tauri Setup Guide](https://v2.tauri.app/start/prerequisites/) for your OS (Visual Studio C++ Build Tools for Windows).
+### 📖 Integrated Manga Reader
+- **WeebCentral Extension**: Browse, search, and read manga directly within the app.
+- **Webtoon & Page Modes**: Read in continuous vertical scroll or classic single-page view.
+- **Library Management**: Search for new series, view chapter lists, and track your reading progress.
 
-### 2. Setup Environment Variables
-Clone the repo and create a `.env` file in the root directory:
+### 🎮 Discord Rich Presence
+- **Live Status**: Show your friends exactly what you're watching or reading in real-time.
+- **Rich Metadata**: Displays cover art, episode/chapter numbers, and "View on AniList" buttons on your Discord profile.
 
-```bash
-cp .env.example .env
-```
+### 🎨 Modern Experience
+- **Local Library**: Organize your local anime folders (D:/Anime, etc.) in a sleek sidebar interface.
+- **Glassmorphic UI**: A beautiful, responsive interface with smooth animations and dark mode support.
+- **Floating Mini-Player**: A persistent pill-shaped indicator shows you active tracking status while you multitask.
 
-Open `.env` and fill in your AniList API credentials:
-- `VITE_ANILIST_CLIENT_ID`: Your AniList Developer Client ID
-- `VITE_ANILIST_CLIENT_SECRET`: Your AniList Developer Client Secret
+## Quick Start
 
-### 3. Install and Run
-Run the following commands in your terminal:
+### Prerequisites
+- **Node.js** (v18+)
+- **Rust** (Latest Stable)
+- **Tauri Dependencies**: [Setup Guide](https://v2.tauri.app/start/prerequisites/) (e.g., C++ Build Tools on Windows)
 
-```bash
-# Install Node dependencies
-npm install
+### Installation
 
-# Run in development mode
-npm run tauri dev
-```
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/yourusername/play-on.git
+    cd play-on
+    ```
 
-### 4. Build for Production
-To create a standalone installer for your OS:
+2.  **Configure Environment**
+    Create a `.env` file in the root directory:
+    ```bash
+    VITE_ANILIST_CLIENT_ID=your_client_id
+    VITE_ANILIST_CLIENT_SECRET=your_client_secret
+    ```
 
-```bash
-npm run tauri build
-```
+3.  **Install & Run**
+    ```bash
+    npm install
+    npm run tauri dev
+    ```
 
-## 🔐 Notes on Connectivity
+## Technology Stack
 
-The app uses custom protocol handling (`playon://`) for AniList login. If you have trouble logging in, use the **"Trouble logging in?"** link in the sidebar or onboarding page to paste your authorization code manually.
-
----
-
-## 🏗️ Project Stack
-
-- **Frontend**: React 19, Vite, Apollo Client (GraphQL)
-- **Backend**: Rust, Tauri 2.0
-- **Storage**: LocalStorage & AniList API
+- **Frontend**: React 19, Vite, Apollo Client (GraphQL), TailwindCSS v4
+- **Backend**: Rust, Tauri 2.0 (Plugin System)
+- **State**: Context API, Apollo Cache Persistence
 
 ---
 
 <div align="center">
-  <p>Experimental project for personal use.</p>
+  <p>Built with ❤️ for the anime community.</p>
 </div>
