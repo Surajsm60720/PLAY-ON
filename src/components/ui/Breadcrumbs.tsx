@@ -28,47 +28,25 @@ const Breadcrumbs: React.FC = () => {
 
             try {
                 const decodedPath = decodeURIComponent(encodedPath);
-                // "D:\Anime\Naruto" or "/home/user/anime"
 
-                // Split logic that handles multiple separators
+                // Get just the last folder name
                 const parts = decodedPath.split(/[\\/]/).filter(Boolean);
+                const folderName = parts[parts.length - 1] || '';
 
-                // Detect system style for reconstruction
-                const isWindows = decodedPath.includes(':') || decodedPath.includes('\\');
-                const separator = isWindows ? '\\' : '/';
+                // Parse and clean the folder name (remove noise like [SubGroup], quality tags, etc.)
+                const parsedName = folderName
+                    .replace(/^\[.*?\]\s*/g, '')          // Remove leading [SubGroup]
+                    .replace(/\[.*?\]/g, '')               // Remove other [tags]
+                    .replace(/\(.*?\)/g, '')               // Remove (stuff in parens)
+                    .replace(/\d{3,4}p/gi, '')             // Remove 1080p, 720p, etc.
+                    .replace(/HEVC|x265|x264|AVC|AAC|FLAC|OPUS|Dual-Audio|10-bit|BD|BluRay|WEB|DL|Rip/gi, '')
+                    .replace(/[_\.]/g, ' ')                // Replace underscores/dots with spaces
+                    .replace(/\s+/g, ' ')                  // Collapse multiple spaces
+                    .trim();
 
-                let currentBuildPath = '';
-
-                // Handle Unix Root if needed
-                if (!isWindows && decodedPath.startsWith('/')) {
-                    currentBuildPath = '/';
-                }
-
-                parts.forEach((part, index) => {
-                    // Rebuild path for this segment
-                    if (index === 0) {
-                        if (isWindows) {
-                            currentBuildPath = part;
-                            // If "D:", ensure we treat it consistently? 
-                            // Usually "D:" alone isn't enough, but "D:\" is. 
-                            // Let's assume the split stripped the trailing slash of the root drive if it existed.
-                            if (part.endsWith(':')) currentBuildPath += '\\';
-                        } else {
-                            if (currentBuildPath === '/') currentBuildPath += part;
-                            else currentBuildPath = part;
-                        }
-                    } else {
-                        // Add separator
-                        if (!currentBuildPath.endsWith(separator)) {
-                            currentBuildPath += separator;
-                        }
-                        currentBuildPath += part;
-                    }
-
-                    crumbs.push({
-                        label: part,
-                        path: `/local/${encodeURIComponent(currentBuildPath)}`
-                    });
+                crumbs.push({
+                    label: parsedName || folderName,  // Fallback to original if parsing removes everything
+                    path: `/local/${encodedPath}`
                 });
 
             } catch (e) {

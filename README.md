@@ -13,6 +13,8 @@
 
 ## 🛠️ Current Features
 
+[View Changelog](./CHANGELOG.md)
+
 - **Media Detection** — Basic detection for media players like VLC and MPV on Windows.
 - **Title Parsing** — Attempts to grab anime titles and episode numbers from window titles.
 - **AniList Sync** — Connect your account to keep your list updated (requires setup).

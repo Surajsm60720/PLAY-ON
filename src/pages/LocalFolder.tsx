@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { openPath } from '@tauri-apps/plugin-opener';
 import Folder from '../components/ui/Folder';
+import AniListSearchDialog from '../components/ui/AniListSearchDialog';
+import { useFolderMappings } from '../hooks/useFolderMappings';
+import { useNowPlaying } from '../context/NowPlayingContext';
 
 interface FileItem {
     name: string;
@@ -52,9 +55,21 @@ function LocalFolder() {
     const [files, setFiles] = useState<FileItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Folder-to-AniList mapping hook
+    const { getMappingByPath, addMapping, removeMapping } = useFolderMappings();
+
+    // Now Playing context to trigger manual sessions
+    const { startManualSession } = useNowPlaying();
 
     // Decode the path from URL
     const currentPath = folderPath ? decodeURIComponent(folderPath) : '';
+    const folderName = currentPath.split(/[\\/]/).pop() || '';
+
+    // Check if this folder is already linked to an anime
+    const currentMapping = getMappingByPath(currentPath);
 
     useEffect(() => {
         async function loadFiles() {
@@ -84,6 +99,32 @@ function LocalFolder() {
             // Open file in default application
             try {
                 await openPath(item.path);
+
+                // If this folder is linked to an anime, trigger manual Now Playing session
+                if (currentMapping) {
+                    const ext = item.name.split('.').pop()?.toLowerCase();
+                    const videoExts = ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm'];
+
+                    if (videoExts.includes(ext || '')) {
+                        // Parse episode number from filename
+                        // Patterns: E10, EP10, Episode 10, - 10, 10.mkv, etc.
+                        const episodeMatch = item.name.match(
+                            /(?:E|EP|Episode\s*)?(\d{1,3})(?:\s*v\d)?(?:\s*[\[\(\-]|\s*\.\w{3,4}$)/i
+                        );
+                        const episode = episodeMatch ? parseInt(episodeMatch[1], 10) : 1;
+
+                        console.log(`[LocalFolder] Starting Now Playing session: ${currentMapping.animeName} Ep ${episode}`);
+
+                        // Trigger the Now Playing session via context
+                        startManualSession({
+                            anilistId: currentMapping.anilistId,
+                            animeName: currentMapping.animeName,
+                            coverImage: currentMapping.coverImage,
+                            episode,
+                            filePath: item.path
+                        });
+                    }
+                }
             } catch (err) {
                 console.error("Failed to open file:", err);
             }
@@ -112,8 +153,16 @@ function LocalFolder() {
         );
     }
 
-    const directories = files.filter(f => f.is_dir);
-    const regularFiles = files.filter(f => !f.is_dir);
+
+
+    // ... (existing code)
+
+    const filteredFiles = files.filter(file =>
+        file.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const directories = filteredFiles.filter(f => f.is_dir);
+    const regularFiles = filteredFiles.filter(f => !f.is_dir);
 
     // Mock items to put "inside" the folders
     const mockFolderItems = [
@@ -125,23 +174,93 @@ function LocalFolder() {
     return (
         <div className="max-w-[1400px] mx-auto pb-10 px-6 min-h-screen">
             {/* Header */}
-            <div className="mb-10 mt-6 px-2">
-                <h1
-                    className="text-4xl font-bold text-white mb-2"
-                    style={{
-                        fontFamily: 'var(--font-rounded)',
-                        letterSpacing: '-0.02em',
-                        textShadow: '0 4px 12px rgba(0,0,0,0.3)'
-                    }}
-                >
-                    {currentPath.split(/[\\/]/).pop()}
-                </h1>
-                <p
-                    className="text-white/40 text-sm font-mono break-all"
-                    style={{ fontFamily: 'var(--font-mono)' }}
-                >
-                    {currentPath}
-                </p>
+            <div className="mb-10 mt-6 px-2 flex items-end justify-between">
+                <div>
+                    <h1
+                        className="text-4xl font-bold text-white mb-2"
+                        style={{
+                            fontFamily: 'var(--font-rounded)',
+                            letterSpacing: '-0.02em',
+                            textShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                        }}
+                    >
+                        {currentPath.split(/[\\/]/).pop()}
+                    </h1>
+                    <p
+                        className="text-white/40 text-sm font-mono break-all mb-4"
+                        style={{ fontFamily: 'var(--font-mono)' }}
+                    >
+                        {currentPath}
+                    </p>
+
+                    {/* AniList Tracking Section */}
+                    {currentMapping ? (
+                        // Linked state: show anime info with unlink button
+                        <div
+                            className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10"
+                            style={{ background: 'rgba(180, 162, 246, 0.1)' }}
+                        >
+                            {currentMapping.coverImage && (
+                                <img
+                                    src={currentMapping.coverImage}
+                                    alt={currentMapping.animeName}
+                                    className="w-10 h-14 object-cover rounded-lg"
+                                />
+                            )}
+                            <div className="flex flex-col">
+                                <span
+                                    className="text-xs text-white/40 uppercase tracking-wider"
+                                    style={{ fontFamily: 'var(--font-mono)' }}
+                                >
+                                    Linked to AniList
+                                </span>
+                                <span
+                                    className="text-sm font-semibold text-white"
+                                    style={{ fontFamily: 'var(--font-rounded)' }}
+                                >
+                                    {currentMapping.animeName}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => removeMapping(currentPath)}
+                                className="ml-4 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:bg-red-500/20 text-red-400 border border-red-500/30"
+                                style={{ fontFamily: 'var(--font-rounded)' }}
+                            >
+                                Unlink
+                            </button>
+                        </div>
+                    ) : (
+                        // Not linked: show track button
+                        <button
+                            onClick={() => setIsSearchDialogOpen(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-105"
+                            style={{
+                                fontFamily: 'var(--font-rounded)',
+                                background: 'linear-gradient(135deg, var(--color-zen-accent), #9c7cf0)',
+                                color: 'white',
+                                boxShadow: '0 4px 15px rgba(180, 162, 246, 0.3)'
+                            }}
+                        >
+                            <span>🔗</span>
+                            Track on AniList
+                        </button>
+                    )}
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative group mb-1">
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Filter files..."
+                        className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm font-medium w-64 focus:bg-white/10 focus:border-white/20 outline-none transition-all duration-300 placeholder-white/30"
+                        style={{ fontFamily: 'var(--font-rounded)' }}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+                </div>
             </div>
 
             {/* Folders Section */}
@@ -159,7 +278,7 @@ function LocalFolder() {
                             <div
                                 key={dir.path}
                                 className="flex flex-col items-center gap-3 group cursor-pointer"
-                                onDoubleClick={() => handleItemClick(dir)}
+                                onClick={() => handleItemClick(dir)}
                             >
                                 <Folder
                                     size={0.85}
@@ -241,6 +360,17 @@ function LocalFolder() {
                     </p>
                 </div>
             )}
+
+            {/* AniList Search Dialog */}
+            <AniListSearchDialog
+                isOpen={isSearchDialogOpen}
+                onClose={() => setIsSearchDialogOpen(false)}
+                onSelect={(anime) => {
+                    addMapping(currentPath, anime.id, anime.title, anime.coverImage);
+                    setIsSearchDialogOpen(false);
+                }}
+                initialSearchTerm={folderName}
+            />
         </div>
     );
 }

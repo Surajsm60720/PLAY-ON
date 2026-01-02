@@ -45,7 +45,7 @@ function Sidebar({ width: _width }: SidebarProps) {
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                paddingTop: '64px', // Keep padding for titlebar
+                paddingTop: '40px', // Keep padding for titlebar
                 background: 'rgba(0, 0, 0, 0.2)',
                 borderRight: '1px solid rgba(255, 255, 255, 0.03)',
                 backdropFilter: 'blur(10px)',

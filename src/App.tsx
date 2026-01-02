@@ -10,6 +10,7 @@ import CounterDemo from './pages/CounterDemo';
 import MainLayout from './layouts/MainLayout';
 import { AuthProvider } from './context/AuthContext';
 import { LocalMediaProvider } from './context/LocalMediaContext';
+import { NowPlayingProvider } from './context/NowPlayingContext';
 import LocalFolder from './pages/LocalFolder';
 import "./App.css";
 
@@ -149,16 +150,12 @@ function ProtectedRoute() {
  * - Tauri window stays open, content inside changes
  */
 import { useOfflineSync } from './lib/offlineQueue';
-import { useDiscordRPC } from './hooks/useDiscordRPC';
 
 import { ApolloProvider } from '@apollo/client';
 import { apolloClient } from './lib/apollo';
 
 function App() {
   useOfflineSync();
-
-  // Enable Discord Rich Presence - automatically updates based on what you're watching
-  useDiscordRPC(true);
 
   useEffect(() => {
     // DEV: Clear onboarding status to force onboarding every time
@@ -171,27 +168,29 @@ function App() {
     <ApolloProvider client={apolloClient}>
       <AuthProvider>
         <LocalMediaProvider>
-          <BrowserRouter>
-            <Routes>
-              {/* Root route - checks if onboarding needed */}
-              <Route path="/" element={<ProtectedRoute />} />
+          <NowPlayingProvider>
+            <BrowserRouter>
+              <Routes>
+                {/* Root route - checks if onboarding needed */}
+                <Route path="/" element={<ProtectedRoute />} />
 
-              {/* Main App Layout */}
-              <Route element={<MainLayout />}>
-                <Route path="/home" element={<Home />} />
-                <Route path="/anime-list" element={<AnimeList />} />
-                <Route path="/history" element={<History />} />
-                <Route path="/statistics" element={<Statistics />} />
+                {/* Main App Layout */}
+                <Route element={<MainLayout />}>
+                  <Route path="/home" element={<Home />} />
+                  <Route path="/anime-list" element={<AnimeList />} />
+                  <Route path="/history" element={<History />} />
+                  <Route path="/statistics" element={<Statistics />} />
 
-                {/* Dynamic route for anime details */}
-                <Route path="/anime/:id" element={<AnimeDetails />} />
-                <Route path="/counter-demo" element={<CounterDemo />} />
+                  {/* Dynamic route for anime details */}
+                  <Route path="/anime/:id" element={<AnimeDetails />} />
+                  <Route path="/counter-demo" element={<CounterDemo />} />
 
-                {/* Local Folder Route */}
-                <Route path="/local/:folderPath" element={<LocalFolder />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
+                  {/* Local Folder Route */}
+                  <Route path="/local/:folderPath" element={<LocalFolder />} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </NowPlayingProvider>
         </LocalMediaProvider>
       </AuthProvider>
     </ApolloProvider>
