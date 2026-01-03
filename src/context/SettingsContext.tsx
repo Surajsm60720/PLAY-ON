@@ -5,6 +5,17 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 // Manages all application settings with localStorage persistence
 // ============================================================================
 
+// Keyboard shortcut action IDs
+export type ShortcutAction =
+    | 'searchAnime'
+    | 'searchManga'
+    | 'goHome'
+    | 'goAnimeList'
+    | 'goMangaList'
+    | 'goSettings'
+    | 'goProfile'
+    | 'escape';
+
 export interface Settings {
     // General
     theme: 'light' | 'dark';
@@ -25,7 +36,21 @@ export interface Settings {
 
     // Advanced
     developerMode: boolean;
+
+    // Keyboard Shortcuts
+    keyboardShortcuts: Record<ShortcutAction, string>;
 }
+
+export const DEFAULT_KEYBOARD_SHORTCUTS: Record<ShortcutAction, string> = {
+    searchAnime: 'Ctrl+A',
+    searchManga: 'Ctrl+M',
+    goHome: 'Ctrl+H',
+    goAnimeList: 'Ctrl+Shift+A',
+    goMangaList: 'Ctrl+Shift+M',
+    goSettings: 'Ctrl+,',
+    goProfile: 'Ctrl+P',
+    escape: 'Escape',
+};
 
 const DEFAULT_SETTINGS: Settings = {
     // General
@@ -47,6 +72,9 @@ const DEFAULT_SETTINGS: Settings = {
 
     // Advanced
     developerMode: false,
+
+    // Keyboard Shortcuts
+    keyboardShortcuts: { ...DEFAULT_KEYBOARD_SHORTCUTS },
 };
 
 interface SettingsContextType {
@@ -71,8 +99,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
+
+                // Deep merge keyboardShortcuts to ensure new shortcuts (like goProfile) are added
+                // even if the user has saved settings from a previous version
+                const mergedShortcuts = {
+                    ...DEFAULT_SETTINGS.keyboardShortcuts,
+                    ...(parsed.keyboardShortcuts || {})
+                };
+
                 // Merge with defaults to handle new settings added in updates
-                setSettings({ ...DEFAULT_SETTINGS, ...parsed });
+                setSettings({
+                    ...DEFAULT_SETTINGS,
+                    ...parsed,
+                    keyboardShortcuts: mergedShortcuts
+                });
             } catch (e) {
                 console.error('Failed to parse saved settings:', e);
             }
