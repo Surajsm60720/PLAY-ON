@@ -417,6 +417,88 @@ async fn download_image_for_notification(url: String) -> Result<String, String> 
     Ok(path_str)
 }
 
+/// Tauri command to make HTTP requests from Rust side (bypasses CORS)
+/// Used for streaming providers that have CORS restrictions
+///
+/// # Arguments
+/// * `url` - URL to fetch
+/// * `method` - HTTP method (GET, POST, etc.)
+/// * `headers` - Optional headers as JSON object
+/// * `body` - Optional request body
+///
+/// # Returns
+/// * JSON with response status, headers, and body
+#[tauri::command]
+async fn http_proxy_command(
+    url: String,
+    method: Option<String>,
+    headers: Option<serde_json::Value>,
+    body: Option<String>,
+) -> Result<String, String> {
+    use serde_json::json;
+
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    let method_str = method.unwrap_or_else(|| "GET".to_string());
+    let req_method = match method_str.to_uppercase().as_str() {
+        "POST" => reqwest::Method::POST,
+        "PUT" => reqwest::Method::PUT,
+        "DELETE" => reqwest::Method::DELETE,
+        "PATCH" => reqwest::Method::PATCH,
+        _ => reqwest::Method::GET,
+    };
+
+    let mut request = client.request(req_method, &url);
+
+    // Add custom headers
+    if let Some(hdrs) = headers {
+        if let Some(obj) = hdrs.as_object() {
+            for (key, value) in obj {
+                if let Some(val_str) = value.as_str() {
+                    request = request.header(key, val_str);
+                }
+            }
+        }
+    }
+
+    // Add body for POST/PUT/PATCH
+    if let Some(req_body) = body {
+        request = request.body(req_body);
+    }
+
+    let response = request
+        .send()
+        .await
+        .map_err(|e| format!("HTTP request failed: {}", e))?;
+
+    let status = response.status().as_u16();
+    let response_headers: serde_json::Map<String, serde_json::Value> = response
+        .headers()
+        .iter()
+        .map(|(k, v)| {
+            (
+                k.as_str().to_string(),
+                serde_json::Value::String(v.to_str().unwrap_or("").to_string()),
+            )
+        })
+        .collect();
+
+    let body_text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response body: {}", e))?;
+
+    Ok(json!({
+        "status": status,
+        "headers": response_headers,
+        "body": body_text
+    })
+    .to_string())
+}
+
 /// Simple hash function for cache keys
 fn md5_hash(s: &str) -> u64 {
     use std::collections::hash_map::DefaultHasher;
@@ -465,7 +547,8 @@ pub fn run() {
             detect_anime_command,
             update_anime_progress_command,
             progressive_search_command,
-            download_image_for_notification
+            download_image_for_notification,
+            http_proxy_command
         ])
         .setup(|app| {
             // Register deep links at runtime for development mode (Windows/Linux)

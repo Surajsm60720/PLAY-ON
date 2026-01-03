@@ -5,7 +5,6 @@ import { openPath } from '@tauri-apps/plugin-opener';
 import Folder from '../components/ui/Folder';
 import AniListSearchDialog from '../components/ui/AniListSearchDialog';
 import { useFolderMappings } from '../hooks/useFolderMappings';
-import { useNowPlaying } from '../context/NowPlayingContext';
 import { useAnimeData } from '../hooks/useAnimeData';
 
 interface FileItem {
@@ -90,9 +89,6 @@ function LocalFolder() {
     // Folder-to-AniList mapping hook
     const { getMappingByPath, addMapping, removeMapping } = useFolderMappings();
 
-    // Now Playing context to trigger manual sessions
-    const { startManualSession } = useNowPlaying();
-
     // Anime Data hook
     const { getAnimeDetails } = useAnimeData();
 
@@ -153,22 +149,6 @@ function LocalFolder() {
             // Open file in default application
             try {
                 await openPath(item.path);
-
-                // If this folder is linked to an anime, trigger manual Now Playing session
-                if (currentMapping) {
-                    if (isVideoFile(item.name)) {
-                        const episode = parseEpisode(item.name) || 1;
-
-                        // Trigger the Now Playing session via context
-                        startManualSession({
-                            anilistId: currentMapping.anilistId,
-                            animeName: currentMapping.animeName,
-                            coverImage: currentMapping.coverImage,
-                            episode,
-                            filePath: item.path
-                        });
-                    }
-                }
             } catch (err) {
                 console.error("Failed to open file:", err);
             }
@@ -210,15 +190,6 @@ function LocalFolder() {
 
         try {
             await openPath(nextEpisodeFile.path);
-
-            // Trigger Now Playing session
-            startManualSession({
-                anilistId: currentMapping.anilistId,
-                animeName: currentMapping.animeName,
-                coverImage: currentMapping.coverImage,
-                episode: nextEpisodeNumber,
-                filePath: nextEpisodeFile.path
-            });
         } catch (err) {
             console.error("Failed to open file:", err);
         }

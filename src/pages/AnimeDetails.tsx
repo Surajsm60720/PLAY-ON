@@ -8,6 +8,7 @@ import Loading from '../components/ui/Loading';
 import { AnimeStats } from '../components/anime/AnimeStats';
 import { AnimeProgressCard } from '../components/anime/AnimeProgressCard';
 import { AnimeResumeButton } from '../components/anime/AnimeResumeButton';
+import StreamingSection from '../components/anime/StreamingSection';
 
 function AnimeDetails() {
     const { id } = useParams<{ id: string }>();
@@ -163,6 +164,12 @@ function AnimeDetails() {
                                 folderPath={folderMapping.folderPath}
                             />
                         )}
+
+                        {/* Streaming Section */}
+                        <StreamingSection
+                            animeTitle={title}
+                            anilistId={anime.id}
+                        />
 
                         {/* Progress Control */}
                         <AnimeProgressCard

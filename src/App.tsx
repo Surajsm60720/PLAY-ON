@@ -20,6 +20,7 @@ import { NowPlayingProvider } from './context/NowPlayingContext';
 import { SettingsProvider } from './context/SettingsContext';
 import LocalFolder from './pages/LocalFolder';
 import Settings from './pages/Settings';
+import StreamPage from './pages/StreamPage';
 import UserProfile from './pages/UserProfile';
 import "./App.css";
 
@@ -189,6 +190,9 @@ function App() {
 
                   {/* Full-screen Manga Reader (outside MainLayout) */}
                   <Route path="/read/:sourceId/:chapterId" element={<MangaReader />} />
+
+                  {/* Full-screen Streaming Player (outside MainLayout) */}
+                  <Route path="/stream/:provider/:episodeId" element={<StreamPage />} />
 
                   {/* Main App Layout */}
                   <Route element={<MainLayout />}>
