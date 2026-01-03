@@ -42,6 +42,29 @@ function AnimeDetails() {
         load();
     }, [id, getAnimeDetails]);
 
+    // Discord Rich Presence - show browsing this anime
+    useEffect(() => {
+        if (!anime) return;
+
+        let isMounted = true;
+        const title = anime.title?.english || anime.title?.romaji || 'Unknown Anime';
+        const coverImage = anime.coverImage?.extraLarge || anime.coverImage?.large;
+
+        const updateRPC = async () => {
+            const { setBrowsingAnimeActivity } = await import('../services/discordRPC');
+            if (isMounted) {
+                setBrowsingAnimeActivity(title, coverImage, anime.id);
+            }
+        };
+
+        updateRPC();
+
+        // Cleanup on unmount or change
+        return () => {
+            isMounted = false;
+        };
+    }, [anime?.id, anime?.title?.english, anime?.title?.romaji, anime?.coverImage?.extraLarge]);
+
     const handleProgressUpdate = async (newProgress: number) => {
         if (!anime || updating) return;
         setUpdating(true);
@@ -63,66 +86,45 @@ function AnimeDetails() {
         </div>
     );
 
-    const heroImage = anime.bannerImage || anime.coverImage?.extraLarge || anime.coverImage?.large || '';
+
     const title = anime.title?.english || anime.title?.romaji || 'Unknown Title';
     const recommendations = anime.recommendations?.nodes.map(n => n.mediaRecommendation) || [];
 
     return (
-        <div className="relative min-h-full font-rounded overflow-hidden pb-20" style={{ color: 'var(--color-text-main)' }}>
-            {/* --- Y2K Glass Background --- */}
-            <div className="fixed inset-0 z-0 select-none pointer-events-none">
-                {/* Blurred Hero Background */}
+        <div className="relative min-h-full font-rounded pb-20" style={{ color: 'var(--color-text-main)', margin: '-96px -32px 0 -32px' }}>
+            {/* Banner - Full Width & Top Bleed */}
+            <div
+                className="relative w-full h-[350px] md:h-[450px]"
+            >
                 <div
-                    className="absolute -inset-10 bg-cover bg-top blur-3xl opacity-20 scale-125"
-                    style={{ backgroundImage: `url(${heroImage})` }}
-                />
-                {/* Mesh Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f]/80 to-transparent" />
-                {/* Grid Lines Pattern */}
-                <div
-                    className="absolute inset-0 opacity-10"
+                    className="absolute inset-0 bg-cover bg-center"
                     style={{
-                        backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)',
-                        backgroundSize: '40px 40px'
+                        backgroundImage: anime.bannerImage
+                            ? `url(${anime.bannerImage})`
+                            : `url(${anime.coverImage?.extraLarge})`
                     }}
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f]/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0f]/80 via-transparent to-transparent" />
             </div>
 
-            <div className="relative z-10 max-w-[1600px] mx-auto p-6 flex flex-col gap-10">
-                {/* Header / Nav */}
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 hover:scale-105 transition-all flex items-center gap-2 group"
-                    >
-                        <span className="font-mono text-xs text-lavender-mist group-hover:text-white">&lt; RETURN</span>
-                    </button>
-                    <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
-                </div>
+            {/* Main Content Grid - Overlapping Banner */}
+            <div className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 -mt-48 md:-mt-64 flex flex-col gap-10">
+                <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr] gap-8 md:gap-12 items-start">
 
-                {/* Main Content Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-10 items-start">
-
-                    {/* Left Column: Cover Art */}
-                    <div className="relative group perspective-1000">
-                        {/* Glowing "Aura" */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-lavender-mist to-sky-blue blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-700" />
-
-                        <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:rotate-y-2 group-hover:scale-[1.02]">
+                    {/* Left Column: Single Poster Cover */}
+                    <div className="relative group shrink-0 mx-auto md:mx-0 w-[180px] md:w-full">
+                        <div className="relative rounded-xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] ring-1 ring-white/10 transition-transform duration-500 group-hover:scale-[1.02]">
                             <img
                                 src={anime.coverImage.extraLarge || anime.coverImage.large}
                                 alt={title}
                                 className="w-full h-auto object-cover aspect-[2/3]"
                             />
-                            {/* Glass Glint */}
+                            {/* Glass Glint Overlay */}
                             <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                         </div>
 
-                        {/* Status Pill */}
-                        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 shadow-lg flex items-center gap-2 whitespace-nowrap">
-                            <div className={`w-2 h-2 rounded-full ${anime.status === 'RELEASING' ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
-                            <span className="font-mono text-xs font-bold tracking-widest uppercase">{anime.status}</span>
-                        </div>
+
                     </div>
 
                     {/* Right Column: Details */}
@@ -202,7 +204,7 @@ function AnimeDetails() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }
 

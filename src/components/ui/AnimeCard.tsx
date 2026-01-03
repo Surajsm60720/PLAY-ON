@@ -6,12 +6,18 @@ interface AnimeCardProps {
     anime: Anime;
     onClick: (id: number) => void;
     progress?: number;
+    onResume?: () => void; // Optional resume callback for linked manga
 }
 
-const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress }) => {
+const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress, onResume }) => {
     const title = anime.title.english || anime.title.romaji;
     const episodes = anime.episodes || '?';
     const hasProgress = progress !== undefined;
+
+    const handleResumeClick = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent card click
+        onResume?.();
+    };
 
     return (
         <div
@@ -27,6 +33,19 @@ const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress }) => {
                 </div>
             )}
 
+            {/* Resume Button */}
+            {onResume && (
+                <button
+                    className="anime-card__resume-btn"
+                    onClick={handleResumeClick}
+                    title="Resume reading"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                </button>
+            )}
+
             {/* Image Container */}
             <div className={`anime-card__image-wrapper ${hasProgress ? 'anime-card__image-wrapper--notched' : ''}`}>
                 <img
@@ -38,13 +57,15 @@ const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress }) => {
 
                 {/* Hover Overlay */}
                 <div className="anime-card__overlay">
+                    {/* Format Tag (Moved to Top-Left via absolute positioning) */}
+                    {anime.format && (
+                        <span className="anime-card__format">{anime.format}</span>
+                    )}
+
                     <h3 className="anime-card__title">{title}</h3>
                     {anime.averageScore && (
                         <div className="anime-card__meta">
                             <span className="anime-card__score">{anime.averageScore}% Match</span>
-                            {anime.format && (
-                                <span className="anime-card__format">{anime.format}</span>
-                            )}
                         </div>
                     )}
                 </div>
@@ -54,3 +75,4 @@ const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress }) => {
 };
 
 export default AnimeCard;
+

@@ -5,7 +5,6 @@ import AnimeCard from '../components/ui/AnimeCard'; // Reusing AnimeCard for Man
 import { useAuth } from '../hooks/useAuth';
 import { USER_MANGA_COLLECTION_QUERY } from '../api/anilistClient';
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
-import { useMangaMappings } from '../hooks/useMangaMappings';
 
 // Define status types based on AniList
 type ListStatus = 'All' | 'Reading' | 'Completed' | 'Paused' | 'Dropped' | 'Planning';
@@ -38,14 +37,13 @@ function MangaList() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { user, isAuthenticated, loading: authLoading } = useAuth();
-    const { getMappingByAnilistId } = useMangaMappings();
 
     // Use Apollo Query for automatic caching and loading state management
     const { data, loading: queryLoading, error: queryError } = useQuery(USER_MANGA_COLLECTION_QUERY, {
         variables: { userId: user?.id },
         skip: !user?.id,
-        fetchPolicy: 'cache-first',
-        nextFetchPolicy: 'cache-first',
+        fetchPolicy: 'cache-and-network', // Show cache first, then update from network
+        nextFetchPolicy: 'cache-first', // Use cache for subsequent re-renders
         notifyOnNetworkStatusChange: true,
         pollInterval: 600000, // Refresh every 10 minutes
     });
@@ -82,19 +80,15 @@ function MangaList() {
         return [];
     }, [isAuthenticated, data]);
 
-    const isLoading = isAuthenticated ? queryLoading : authLoading;
+    // Loading state - only show loading if we have no cached data to display
+    // This ensures cache-first display without loading screen
+    const hasData = fullMangaList.length > 0;
+    const isLoading = !hasData && (isAuthenticated ? queryLoading : authLoading);
     const error = queryError ? "Failed to fetch manga list." : null;
 
     const handleMangaClick = (id: number) => {
-        const mapping = getMappingByAnilistId(id);
-        if (mapping) {
-            navigate(`/manga/${mapping.sourceId}/${mapping.sourceMangaId}`);
-        } else {
-            // Fallback: Search in Browse
-            const entry = fullMangaList.find(e => e.media.id === id);
-            const title = entry?.media.title.english || entry?.media.title.romaji || '';
-            navigate(`/manga-browse?q=${encodeURIComponent(title)}`);
-        }
+        // Navigate to MangaDetails page which shows manga info and action buttons
+        navigate(`/manga-details/${id}`);
     };
 
     const [searchQuery, setSearchQuery] = useState('');

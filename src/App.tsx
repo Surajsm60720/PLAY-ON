@@ -11,6 +11,7 @@ import MangaReader from './pages/MangaReader';
 import History from './pages/History';
 import Statistics from './pages/Statistics';
 import AnimeDetails from './pages/AnimeDetails';
+import MangaDetails from './pages/MangaDetails';
 import CounterDemo from './pages/CounterDemo';
 import MainLayout from './layouts/MainLayout';
 import { AuthProvider } from './context/AuthContext';
@@ -200,6 +201,8 @@ function App() {
 
                     {/* Dynamic route for anime details */}
                     <Route path="/anime/:id" element={<AnimeDetails />} />
+                    {/* Dynamic route for manga details */}
+                    <Route path="/manga-details/:id" element={<MangaDetails />} />
                     <Route path="/counter-demo" element={<CounterDemo />} />
 
                     {/* Settings Route */}

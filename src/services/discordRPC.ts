@@ -277,6 +277,58 @@ export function isDiscordRPCInitialized(): boolean {
 }
 
 /**
+ * Set Discord activity when browsing an anime details page
+ */
+export async function setBrowsingAnimeActivity(
+    animeName: string,
+    coverImage?: string | null,
+    anilistId?: number
+): Promise<void> {
+    if (!isInitialized) {
+        const success = await initDiscordRPC();
+        if (!success) return;
+    }
+
+    try {
+        let activity = new Activity()
+            .setDetails(`Browsing: ${animeName.length > 100 ? animeName.substring(0, 97) + '...' : animeName}`)
+            .setState('Checking out details');
+
+        const timestamps = new Timestamps(Date.now());
+        activity = activity.setTimestamps(timestamps);
+
+        const assets = new Assets();
+        if (coverImage) {
+            assets.setLargeImage(coverImage);
+            assets.setLargeText(animeName);
+        } else {
+            assets.setLargeImage(APP_ICON_ASSET);
+            assets.setLargeText(animeName);
+        }
+        assets.setSmallImage(APP_ICON_ASSET);
+        assets.setSmallText('PLAY-ON!');
+        activity = activity.setAssets(assets);
+
+        // Add AniList link if available
+        if (anilistId) {
+            activity = activity.setButton([
+                new Button('View on AniList', `https://anilist.co/anime/${anilistId}`),
+                new Button('GitHub', 'https://github.com/MemestaVedas/PLAY-ON')
+            ]);
+        } else {
+            activity = activity.setButton([
+                new Button('GitHub', 'https://github.com/MemestaVedas/PLAY-ON')
+            ]);
+        }
+
+        await setActivity(activity);
+        console.log('[Discord RPC] Set to browsing anime:', animeName);
+    } catch (err) {
+        console.error('[Discord RPC] Failed to set browsing anime activity:', err);
+    }
+}
+
+/**
  * Update Discord activity with currently reading manga
  */
 export async function updateMangaActivity(params: {

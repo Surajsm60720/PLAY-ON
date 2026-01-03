@@ -66,11 +66,59 @@ export const WeebCentralExtension = defineExtension({
 
                 if (!id) continue;
 
-                // Title is in a nested link with class "link link-hover" or just get text from the card
-                const titleElement = card.querySelector('a.link.link-hover') ||
-                    card.querySelector('.line-clamp-1') ||
-                    card.querySelector('h3, h4, strong');
-                const title = titleElement?.textContent?.trim() || 'Unknown Title';
+                // Title extraction - Try multiple strategies
+                let title = '';
+
+                // Strategy 1: Look for common title elements within the card
+                const titleSelectors = [
+                    'a.link.link-hover',       // WeebCentral's link styled titles
+                    '.line-clamp-1',            // Truncated title class
+                    '.line-clamp-2',            // Two-line titles
+                    '[class*="title"]',         // Any element with "title" in class
+                    'h1, h2, h3, h4, h5',       // Heading elements
+                    'strong',                   // Bold text often used for titles
+                    'span.font-bold',           // Bold span
+                    'p.font-bold'               // Bold paragraph
+                ];
+
+                for (const selector of titleSelectors) {
+                    const el = card.querySelector(selector);
+                    if (el && el.textContent?.trim()) {
+                        const text = el.textContent.trim();
+                        // Skip if it looks like metadata (chapter count, etc)
+                        if (!text.match(/^\d+$/) && !text.toLowerCase().includes('chapter')) {
+                            title = text;
+                            break;
+                        }
+                    }
+                }
+
+                // Strategy 2: Extract from URL slug if selectors fail
+                if (!title || title === 'Unknown Title') {
+                    // URL format: /series/ID/series-name-slug
+                    const slugMatch = href.match(/\/series\/[^\/]+\/(.+)/);
+                    if (slugMatch && slugMatch[1]) {
+                        // Convert slug to readable title: "my-manga-name" -> "My Manga Name"
+                        title = slugMatch[1]
+                            .replace(/-/g, ' ')
+                            .replace(/\b\w/g, char => char.toUpperCase());
+                    }
+                }
+
+                // Strategy 3: Get all text content from card as last resort
+                if (!title || title === 'Unknown Title') {
+                    // Clone card and remove image/SVG elements
+                    const clone = card.cloneNode(true) as Element;
+                    clone.querySelectorAll('img, svg, picture, style').forEach(el => el.remove());
+                    const allText = clone.textContent?.trim() || '';
+                    // Get the first substantial line of text
+                    const lines = allText.split('\n').map(l => l.trim()).filter(l => l.length > 3);
+                    if (lines.length > 0) {
+                        title = lines[0];
+                    }
+                }
+
+                if (!title) title = 'Unknown Title';
 
                 // Cover image is in a <picture> or <img> inside the card
                 const img = card.querySelector('picture img') || card.querySelector('img');

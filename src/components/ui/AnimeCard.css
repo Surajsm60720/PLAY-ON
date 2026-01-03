@@ -189,16 +189,28 @@
 
 /* Format Tag */
 .anime-card__format {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 25;
     font-size: 0.65rem;
     font-family: var(--font-mono);
     text-transform: uppercase;
     color: #A5DBF8;
-    /* Sky Blue */
     background: rgba(165, 219, 248, 0.1);
     border: 1px solid rgba(165, 219, 248, 0.3);
     padding: 2px 6px;
     border-radius: 4px;
     letter-spacing: 0.05em;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transform: translateY(-5px);
+    transition: all 0.3s ease;
+}
+
+.anime-card:hover .anime-card__format {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 /* Decoration Line (Optional "Tech" Detail) */
@@ -211,4 +223,49 @@
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
     opacity: 0.3;
+}
+
+/* --- Resume Button --- */
+.anime-card__resume-btn {
+    position: absolute;
+    bottom: 15px;
+    /* Slightly higher than edge */
+    right: 15px;
+    top: auto;
+    left: auto;
+    z-index: 30;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(56, 189, 248, 0.9);
+    color: #000;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+.anime-card:hover .anime-card__resume-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.anime-card__resume-btn:hover {
+    background: #38bdf8;
+    transform: scale(1.15) !important;
+    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.6);
+}
+
+.anime-card__resume-btn:active {
+    transform: scale(0.95) !important;
+}
+
+.anime-card__resume-btn svg {
+    margin-left: 2px;
+    /* Optical centering for play icon */
 }

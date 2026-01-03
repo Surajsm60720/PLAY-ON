@@ -50,6 +50,33 @@ query ($userId: Int, $status: MediaListStatus) {
 }
 `;
 
+export const USER_MANGA_LIST_QUERY = gql`
+query ($userId: Int, $status: MediaListStatus) {
+  Page {
+    mediaList (userId: $userId, status: $status, type: MANGA, sort: UPDATED_TIME_DESC) {
+      id
+      progress
+      media {
+        id
+        title {
+          english
+          romaji
+        }
+        coverImage {
+          extraLarge
+          large
+        }
+        chapters
+        volumes
+        status
+        format
+        averageScore
+      }
+    }
+  }
+}
+`;
+
 export const USER_ANIME_COLLECTION_QUERY = gql`
 query ($userId: Int) {
   MediaListCollection(userId: $userId, type: ANIME) {
@@ -227,6 +254,72 @@ query ($search: String, $page: Int, $perPage: Int) {
       volumes
       averageScore
       status
+    }
+  }
+}
+`;
+
+const MANGA_DETAILS_QUERY = gql`
+query ($id: Int) {
+  Media (id: $id, type: MANGA) {
+    id
+    title {
+      english
+      romaji
+      native
+    }
+    coverImage {
+      extraLarge
+      large
+      color
+    }
+    bannerImage
+    description(asHtml: false)
+    chapters
+    volumes
+    status
+    format
+    averageScore
+    meanScore
+    startDate {
+      year
+      month
+      day
+    }
+    genres
+    staff(perPage: 3) {
+      nodes {
+        name {
+          full
+        }
+      }
+    }
+    mediaListEntry {
+      id
+      status
+      progress
+      progressVolumes
+      score(format: POINT_100)
+    }
+    recommendations(perPage: 5, sort: RATING_DESC) {
+      nodes {
+        mediaRecommendation {
+           id
+           title {
+             english
+             romaji
+           }
+           coverImage {
+             large
+             medium
+           }
+           chapters
+           volumes
+           averageScore
+           format
+           status
+        }
+      }
     }
   }
 }
@@ -456,6 +549,17 @@ export async function searchManga(search: string, page = 1, perPage = 10) {
 export async function fetchAnimeDetails(id: number) {
   const result = await apolloClient.query({
     query: ANIME_DETAILS_QUERY,
+    variables: { id }
+  });
+  return result;
+}
+
+/**
+ * Fetches specific manga details by AniList ID.
+ */
+export async function fetchMangaDetails(id: number) {
+  const result = await apolloClient.query({
+    query: MANGA_DETAILS_QUERY,
     variables: { id }
   });
   return result;

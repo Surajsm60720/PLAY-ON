@@ -48,6 +48,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Initial load and deep link listener
     useEffect(() => {
         const init = async () => {
+            // OPTIMIZATION: Load user from localStorage immediately for instant UI
+            const storedUser = localStorage.getItem('user_profile');
+            const storedToken = localStorage.getItem('token') || localStorage.getItem('anilist_token');
+
+            if (storedUser && storedToken) {
+                try {
+                    const parsedUser = JSON.parse(storedUser);
+                    console.log("AuthContext: Loaded optimistic user:", parsedUser.name);
+                    setUser(parsedUser);
+                    setLoading(false); // Enable UI immediately
+                } catch (e) {
+                    console.error("AuthContext: Failed to parse stored user", e);
+                }
+            }
+
+            // Sync with Apollo Cache and verify token
             await cacheRestoredPromise;
             checkAuth();
         };
@@ -94,7 +110,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const checkAuth = async () => {
-        setLoading(true);
+        // If we don't have an optimistic user, show loading
+        if (!user) setLoading(true);
+
         const token = localStorage.getItem('token') || localStorage.getItem('anilist_token');
         console.log("checkAuth: Token present?", !!token, token ? token.substring(0, 5) : 'None');
 
@@ -106,8 +124,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.log("fetchCurrentUser result:", result);
 
                 if (result.data && (result.data as any).Viewer) {
-                    console.log("User authenticated:", (result.data as any).Viewer.name);
-                    setUser((result.data as any).Viewer);
+                    const viewer = (result.data as any).Viewer;
+                    console.log("User authenticated:", viewer.name);
+                    setUser(viewer);
+                    // Persist user for next launch
+                    localStorage.setItem('user_profile', JSON.stringify(viewer));
                     setError(null);
                     setLoading(false);
                 } else {
@@ -115,15 +136,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     console.warn('Token invalid or expired', result);
                     localStorage.removeItem('token');
                     localStorage.removeItem('anilist_token');
+                    localStorage.removeItem('user_profile');
                     setUser(null);
                 }
             } catch (err) {
                 console.error('Failed to fetch current user:', err);
-                setUser(null);
+                // Don't clear user immediately on network error if we have optimistic user
+                // Only clear if it's strictly an auth error? 
+                // For now, keep optimistic user if network fails.
             } finally {
                 setLoading(false);
             }
         } else {
+            localStorage.removeItem('user_profile');
+            setUser(null);
             setLoading(false);
         }
     };
@@ -143,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('anilist_token');
+        localStorage.removeItem('user_profile');
         setUser(null);
         // Refresh to fallback
         checkAuth();

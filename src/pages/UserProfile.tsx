@@ -89,45 +89,61 @@ function UserProfile() {
                 }}
             >
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f]/20 to-transparent" />
+            </div>
 
-                {/* Glassmorphic Pill for Avatar and User Info */}
-                <div className="absolute bottom-10 left-10 flex items-center gap-4 px-5 py-2.5 rounded-full bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
-                    <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 shadow-lg ring-1 ring-white/10">
-                        {user?.avatar?.large ? (
-                            <img
-                                src={user.avatar.large}
-                                alt={user.name}
-                                className="w-full h-full object-cover"
-                            />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-2xl">👤</div>
-                        )}
+            {/* Header Island - Relative (Not Sticky) */}
+            <div className="relative z-30 max-w-[1100px] mx-auto px-10 -mt-[50px] mb-12 pointer-events-none">
+                <div className="flex items-center justify-between">
+                    {/* Left: Profile Pill */}
+                    <div className="pointer-events-auto flex items-center gap-5 px-4 py-3 pr-8 rounded-full bg-[#0a0a0f]/80 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] ring-1 ring-white/5 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_8px_32px_rgba(168,85,247,0.25)] hover:border-purple-500/30 group">
+                        <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 shadow-xl ring-2 ring-white/10 group-hover:ring-purple-500/40 transition-all">
+                            {user?.avatar?.large ? (
+                                <img
+                                    src={user.avatar.large}
+                                    alt={user.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-2xl bg-white/10">👤</div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col justify-center">
+                            <h1 className="text-2xl font-black text-white tracking-tight leading-none drop-shadow-md" style={{ fontFamily: 'var(--font-rounded)' }}>
+                                {user?.name || 'User'}
+                            </h1>
+                        </div>
                     </div>
 
-                    <div className="pr-4">
-                        <h1 className="text-2xl font-black text-white tracking-tight" style={{ fontFamily: 'var(--font-rounded)' }}>
-                            {user?.name || 'User'}
-                        </h1>
+                    {/* Right: Actions Pill */}
+                    <div className="pointer-events-auto flex items-center gap-2 px-2 py-2 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl h-fit self-center">
+                        <a
+                            href={`https://anilist.co/user/${user?.name}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-3 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center"
+                            title="View on AniList"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                        </a>
+                        <button
+                            onClick={() => navigate('/settings')}
+                            className="p-3 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center border-l border-white/10 pl-4 ml-1"
+                            title="Settings"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        </button>
                     </div>
                 </div>
             </div>
 
             {/* Content Area with padding */}
-            <div className="max-w-[1100px] mx-auto px-10 py-12">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+            <div className="max-w-[1100px] mx-auto px-10 pb-12">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <div className="flex items-center gap-3">
-                        <div className="w-1 h-8 bg-purple-500 rounded-full" />
+                        <div className="w-1 h-8 bg-purple-500 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
                         <h2 className="text-2xl font-black text-white tracking-tight" style={{ fontFamily: 'var(--font-rounded)' }}>Statistics</h2>
                     </div>
-                    <a
-                        href={`https://anilist.co/user/${user?.name}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-6 py-2.5 rounded-full bg-white/5 border border-white/10 text-white/80 hover:bg-purple-500/20 hover:text-purple-300 hover:border-purple-500/30 transition-all text-sm font-bold flex items-center gap-2 group shadow-xl"
-                    >
-                        View on AniList
-                        <svg className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                    </a>
                 </div>
 
                 {/* Stats Grid */}
