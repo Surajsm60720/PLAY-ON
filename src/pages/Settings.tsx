@@ -20,6 +20,7 @@ import {
 import { DEFAULT_KEYBOARD_SHORTCUTS, ShortcutAction } from '../context/SettingsContext';
 import { formatShortcutFromEvent } from '../hooks/useKeyboardShortcuts';
 import './Settings.css';
+import TrackerConnections from '../components/settings/TrackerConnections';
 
 // ============================================================================
 // SETTINGS PAGE
@@ -258,6 +259,7 @@ function IntegrationsSettings() {
 
 
             </div>
+            <TrackerConnections />
         </div>
     );
 }
