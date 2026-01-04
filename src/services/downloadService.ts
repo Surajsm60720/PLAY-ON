@@ -35,8 +35,29 @@ const downloadState: DownloadState = {
     currentTask: null,
 };
 
+// Bulk download tracking
+let bulkDownloadMode = false;
+let bulkDownloadTotal = 0;
+let bulkDownloadSuccess = 0;
+let bulkDownloadFailed = 0;
+
 // Progress listeners
 const progressListeners: ProgressCallback[] = [];
+
+/**
+ * Check if a download folder is configured in settings
+ */
+export function isDownloadFolderConfigured(): boolean {
+    const settingsJson = localStorage.getItem('app-settings');
+    if (!settingsJson) return false;
+
+    try {
+        const settings = JSON.parse(settingsJson);
+        return !!settings.mangaDownloadPath && settings.mangaDownloadPath.trim() !== '';
+    } catch {
+        return false;
+    }
+}
 
 /**
  * Subscribe to download progress updates
@@ -157,11 +178,21 @@ export function queueChapterDownload(task: DownloadTask): void {
 }
 
 /**
- * Add multiple chapters to download queue
+ * Add multiple chapters to download queue (bulk download)
+ * Sends only one notification at start and one at completion
  */
 export function queueMultipleChapters(tasks: DownloadTask[]): void {
+    // Enable bulk mode
+    bulkDownloadMode = true;
+    bulkDownloadTotal = tasks.length;
+    bulkDownloadSuccess = 0;
+    bulkDownloadFailed = 0;
+
     downloadState.queue.push(...tasks);
-    console.log('[DownloadService] Added', tasks.length, 'chapters to queue. Total:', downloadState.queue.length);
+    console.log('[DownloadService] Bulk download: Added', tasks.length, 'chapters to queue. Total:', downloadState.queue.length);
+
+    // Notify UI about bulk download start (single notification will be sent from MangaSourceDetails)
+    notifyProgress(null, 0, tasks.length, `Starting bulk download of ${tasks.length} chapters...`);
 
     if (!downloadState.isDownloading) {
         processQueue();
@@ -177,14 +208,22 @@ async function processQueue(): Promise<void> {
     }
 
     downloadState.isDownloading = true;
+    const isBulk = bulkDownloadMode;
 
     while (downloadState.queue.length > 0) {
         const task = downloadState.queue.shift()!;
         downloadState.currentTask = task;
 
-        notifyProgress(task.chapterId, 0, 1, `Starting Chapter ${task.chapterNumber}`);
+        // In bulk mode, only send progress updates (not per-chapter "complete" notifications)
+        if (isBulk) {
+            const remaining = downloadState.queue.length + 1;
+            const completed = bulkDownloadTotal - remaining;
+            notifyProgress(task.chapterId, completed, bulkDownloadTotal, `Downloading ${remaining} remaining...`);
+        } else {
+            notifyProgress(task.chapterId, 0, 1, `Starting Chapter ${task.chapterNumber}`);
+        }
 
-        await downloadChapter(
+        const success = await downloadChapter(
             task.sourceId,
             task.mangaId,
             task.mangaTitle,
@@ -192,13 +231,38 @@ async function processQueue(): Promise<void> {
             task.chapterNumber,
             task.entryId
         );
+
+        // Track bulk download results
+        if (isBulk) {
+            if (success) {
+                bulkDownloadSuccess++;
+            } else {
+                bulkDownloadFailed++;
+            }
+        }
     }
 
     downloadState.isDownloading = false;
-    downloadState.isDownloading = false;
     downloadState.currentTask = null;
-    notifyProgress(null, 0, 0, 'Download complete');
-    console.log('[DownloadService] Queue processing complete');
+
+    // Send completion notification
+    if (isBulk) {
+        const statusMessage = bulkDownloadFailed > 0
+            ? `Downloaded ${bulkDownloadSuccess}/${bulkDownloadTotal} chapters (${bulkDownloadFailed} failed)`
+            : `Downloaded all ${bulkDownloadSuccess} chapters successfully`;
+
+        notifyProgress(null, bulkDownloadTotal, bulkDownloadTotal, statusMessage);
+        console.log('[DownloadService] Bulk download complete:', statusMessage);
+
+        // Reset bulk mode
+        bulkDownloadMode = false;
+        bulkDownloadTotal = 0;
+        bulkDownloadSuccess = 0;
+        bulkDownloadFailed = 0;
+    } else {
+        notifyProgress(null, 0, 0, 'Download complete');
+        console.log('[DownloadService] Queue processing complete');
+    }
 }
 
 /**

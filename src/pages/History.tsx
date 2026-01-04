@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, SectionHeader, EmptyState } from '../components/ui/UIComponents';
 import RefreshButton from '../components/ui/RefreshButton';
 import { useHistory, HistoryFlatItem } from '../hooks/useHistory';
@@ -66,42 +67,54 @@ function History() {
                             }
 
                             const data = item.data;
+
+                            // Better approach: Import useNavigate at top level of component
+
+                            const targetLink = data.mediaType === 'MANGA'
+                                ? `/manga-details/${data.mediaId}`
+                                : `/anime/${data.mediaId}`;
+
                             return (
-                                <Card hover className="bg-black/20">
-                                    <div className="grid grid-cols-[60px_1fr_auto] gap-4 items-center">
-                                        {/* Icon/Thumbnail */}
-                                        <div className="w-[60px] h-[60px] rounded-xl overflow-hidden bg-white/5 flex items-center justify-center border border-white/10 shadow-inner relative group">
-                                            <img
-                                                src={data.image}
-                                                alt={data.anime}
-                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/default.jpg';
-                                                }}
-                                            />
-                                            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
-                                        </div>
-
-                                        {/* Info */}
-                                        <div className="min-w-0">
-                                            <div className="font-bold text-white truncate mb-1 text-lg" style={{ fontFamily: 'var(--font-rounded)' }}>
-                                                {data.anime}
+                                <Link to={targetLink} className="block group">
+                                    <Card
+                                        hover
+                                        className="bg-black/20 transition-colors duration-200 hover:bg-white/5 active:scale-[0.99] group-hover:border-white/10"
+                                    >
+                                        <div className="grid grid-cols-[60px_1fr_auto] gap-4 items-center">
+                                            {/* Icon/Thumbnail */}
+                                            <div className="w-[60px] h-[60px] rounded-xl overflow-hidden bg-white/5 flex items-center justify-center border border-white/10 shadow-inner relative group-hover:border-white/20">
+                                                <img
+                                                    src={data.image}
+                                                    alt={data.anime}
+                                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).src = 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/default.jpg';
+                                                    }}
+                                                />
+                                                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
                                             </div>
-                                            <div className="text-sm flex gap-3 items-center font-mono">
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${data.status === 'COMPLETED' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                                                    }`}>
-                                                    {data.status}
-                                                </span>
-                                                <span className="opacity-40 text-white font-bold">{data.progress}</span>
+
+                                            {/* Info */}
+                                            <div className="min-w-0">
+                                                <div className="font-bold text-white truncate mb-1 text-lg group-hover:text-[var(--color-zen-accent)] transition-colors" style={{ fontFamily: 'var(--font-rounded)' }}>
+                                                    {data.anime}
+                                                </div>
+                                                <div className="text-sm flex gap-3 items-center font-mono">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${data.status === 'COMPLETED' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                                        }`}>
+                                                        {data.status}
+                                                    </span>
+                                                    <span className="opacity-40 text-white font-bold">{data.progress}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Time */}
+                                            <div className="text-xs text-white/30 font-bold tabular-nums px-3 py-1 bg-white/5 rounded-full border border-white/5 font-mono group-hover:bg-white/10 transition-colors">
+                                                {data.time}
                                             </div>
                                         </div>
-
-                                        {/* Time */}
-                                        <div className="text-xs text-white/30 font-bold tabular-nums px-3 py-1 bg-white/5 rounded-full border border-white/5 font-mono">
-                                            {data.time}
-                                        </div>
-                                    </div>
-                                </Card>
+                                    </Card>
+                                </Link>
                             );
                         }}
                     />

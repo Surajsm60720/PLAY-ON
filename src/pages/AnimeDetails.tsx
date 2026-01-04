@@ -1,13 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAnimeData, Anime } from '../hooks/useAnimeData';
-import { updateMediaProgress } from '../api/anilistClient';
+import { updateMediaProgress, updateMediaStatus } from '../api/anilistClient';
 import { useFolderMappings } from '../hooks/useFolderMappings';
 import AnimeCard from '../components/ui/AnimeCard';
 import Loading from '../components/ui/Loading';
 import { AnimeStats } from '../components/anime/AnimeStats';
 import { AnimeProgressCard } from '../components/anime/AnimeProgressCard';
 import { AnimeResumeButton } from '../components/anime/AnimeResumeButton';
+import { StatusDropdown } from '../components/ui/StatusDropdown';
+import { PlayIcon, CheckIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon } from '../components/ui/Icons';
+
+// Status options for AniList
+const STATUS_OPTIONS = [
+    { value: 'CURRENT', label: 'Watching', icon: <PlayIcon size={16} /> },
+    { value: 'COMPLETED', label: 'Completed', icon: <CheckIcon size={16} /> },
+    { value: 'PAUSED', label: 'Paused', icon: <PauseIcon size={16} /> },
+    { value: 'DROPPED', label: 'Dropped', icon: <XIcon size={16} /> },
+    { value: 'PLANNING', label: 'Planning', icon: <ClipboardIcon size={16} /> },
+    { value: 'REPEATING', label: 'Rewatching', icon: <RotateCwIcon size={16} /> },
+];
 
 
 function AnimeDetails() {
@@ -19,6 +31,8 @@ function AnimeDetails() {
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState(0);
     const [updating, setUpdating] = useState(false);
+    const [currentStatus, setCurrentStatus] = useState('CURRENT');
+    const [statusUpdating, setStatusUpdating] = useState(false);
 
     // Check if this anime is linked to a local folder
     const folderMapping = anime ? getMappingByAnilistId(anime.id) : undefined;
@@ -33,6 +47,7 @@ function AnimeDetails() {
                     setAnime(data);
                     if (data.mediaListEntry) {
                         setProgress(data.mediaListEntry.progress);
+                        setCurrentStatus(data.mediaListEntry.status || 'CURRENT');
                     }
                 }
             } catch (err) {
@@ -55,6 +70,20 @@ function AnimeDetails() {
             console.error("Failed to update progress:", err);
         } finally {
             setUpdating(false);
+        }
+    };
+
+    const handleStatusChange = async (newStatus: string) => {
+        if (!anime || statusUpdating || newStatus === currentStatus) return;
+
+        setStatusUpdating(true);
+        try {
+            await updateMediaStatus(anime.id, newStatus);
+            setCurrentStatus(newStatus);
+        } catch (err) {
+            console.error('Failed to update status:', err);
+        } finally {
+            setStatusUpdating(false);
         }
     };
 
@@ -105,86 +134,96 @@ function AnimeDetails() {
                         </div>
                     </div>
 
-                    {/* Right Column: Details */}
-                    <div className="flex flex-col gap-8">
-
-                        {/* Title Block */}
-                        <div>
-                            <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-none mb-4 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
-                                {title}
-                            </h1>
-                            <div className="flex flex-wrap gap-2 text-sm text-white/60 font-mono">
-                                <span>{anime.seasonYear || 'YEAR_UNKNOWN'}</span>
-                                <span>//</span>
-                                <span>{anime.format || 'FORMAT_UNKNOWN'}</span>
-                                <span>//</span>
-                                <span>{anime.episodes ? `${anime.episodes} EPS` : 'EPS_UNKNOWN'}</span>
-                            </div>
-                        </div>
-
-                        {/* Stats Grid */}
-                        <AnimeStats anime={anime} />
-
-                        {/* Description Box */}
-                        <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lavender-mist via-sky-blue to-transparent opacity-50 rounded-t-2xl" />
-                            <div
-                                className="text-base leading-relaxed text-gray-200/90 font-light pr-4"
-                                dangerouslySetInnerHTML={{ __html: anime.description || 'No data available.' }}
-                            />
-                        </div>
-
-                        {/* Resume Button (Separated Action) */}
-                        {folderMapping && (
-                            <AnimeResumeButton
-                                onClick={() => navigate(`/local/${encodeURIComponent(folderMapping.folderPath)}`)}
-                                folderPath={folderMapping.folderPath}
-                            />
-                        )}
-
-
-
-                        {/* Progress Control */}
-                        <AnimeProgressCard
-                            anime={anime}
-                            progress={progress}
-                            onUpdate={handleProgressUpdate}
-                            updating={updating}
+                    {/* Status Dropdown */}
+                    <div className="mt-4">
+                        <StatusDropdown
+                            currentStatus={currentStatus}
+                            onStatusChange={handleStatusChange}
+                            options={STATUS_OPTIONS}
+                            loading={statusUpdating}
                         />
-
-                        {/* Genres */}
-                        <div className="flex flex-wrap gap-2">
-                            {anime.genres?.map(g => (
-                                <span key={g} className="px-4 py-1.5 rounded-full text-xs font-mono border border-white/20 bg-white/5 text-white/80 hover:bg-white/10 hover:border-lavender-mist/50 transition-colors cursor-default">
-                                    #{g.toUpperCase()}
-                                </span>
-                            ))}
-                        </div>
-
                     </div>
                 </div>
 
-                {/* Related Anime Section */}
-                {recommendations.length > 0 && (
-                    <div className="mt-10">
-                        <div className="flex items-center gap-4 mb-6">
-                            <h2 className="text-2xl font-bold tracking-tight">SIMILAR_SIGNALS</h2>
-                            <div className="h-px flex-1 bg-white/10" />
-                        </div>
+                {/* Right Column: Details */}
+                <div className="flex flex-col gap-8">
 
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                            {recommendations.map((rec) => (
-                                <AnimeCard
-                                    key={rec.id}
-                                    anime={rec as unknown as Anime}
-                                    onClick={(id) => navigate(`/anime/${id}`)}
-                                />
-                            ))}
+                    {/* Title Block */}
+                    <div>
+                        <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-none mb-4 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
+                            {title}
+                        </h1>
+                        <div className="flex flex-wrap gap-2 text-sm text-white/60 font-mono">
+                            <span>{anime.seasonYear || 'YEAR_UNKNOWN'}</span>
+                            <span>//</span>
+                            <span>{anime.format || 'FORMAT_UNKNOWN'}</span>
+                            <span>//</span>
+                            <span>{anime.episodes ? `${anime.episodes} EPS` : 'EPS_UNKNOWN'}</span>
                         </div>
                     </div>
-                )}
+
+                    {/* Stats Grid */}
+                    <AnimeStats anime={anime} />
+
+                    {/* Description Box */}
+                    <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lavender-mist via-sky-blue to-transparent opacity-50 rounded-t-2xl" />
+                        <div
+                            className="text-base leading-relaxed text-gray-200/90 font-light pr-4"
+                            dangerouslySetInnerHTML={{ __html: anime.description || 'No data available.' }}
+                        />
+                    </div>
+
+                    {/* Resume Button (Separated Action) */}
+                    {folderMapping && (
+                        <AnimeResumeButton
+                            onClick={() => navigate(`/local/${encodeURIComponent(folderMapping.folderPath)}`)}
+                            folderPath={folderMapping.folderPath}
+                        />
+                    )}
+
+
+
+                    {/* Progress Control */}
+                    <AnimeProgressCard
+                        anime={anime}
+                        progress={progress}
+                        onUpdate={handleProgressUpdate}
+                        updating={updating}
+                    />
+
+                    {/* Genres */}
+                    <div className="flex flex-wrap gap-2">
+                        {anime.genres?.map(g => (
+                            <span key={g} className="px-4 py-1.5 rounded-full text-xs font-mono border border-white/20 bg-white/5 text-white/80 hover:bg-white/10 hover:border-lavender-mist/50 transition-colors cursor-default">
+                                #{g.toUpperCase()}
+                            </span>
+                        ))}
+                    </div>
+
+                </div>
             </div>
-        </div >
+
+            {/* Related Anime Section */}
+            {recommendations.length > 0 && (
+                <div className="mt-10">
+                    <div className="flex items-center gap-4 mb-6">
+                        <h2 className="text-2xl font-bold tracking-tight">SIMILAR_SIGNALS</h2>
+                        <div className="h-px flex-1 bg-white/10" />
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                        {recommendations.map((rec) => (
+                            <AnimeCard
+                                key={rec.id}
+                                anime={rec as unknown as Anime}
+                                onClick={(id) => navigate(`/anime/${id}`)}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
 

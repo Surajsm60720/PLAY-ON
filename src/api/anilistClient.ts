@@ -476,6 +476,7 @@ query ($userId: Int, $page: Int, $perPage: Int) {
         createdAt
         media {
           id
+          type
           title {
             english
             romaji
@@ -738,4 +739,63 @@ export async function updateMangaProgress(mediaId: number, chaptersRead: number,
     }
     throw err;
   }
+}
+
+/**
+ * Updates media status (e.g., CURRENT, COMPLETED, PLANNING, PAUSED, DROPPED, REPEATING).
+ * Works for both anime and manga.
+ */
+export async function updateMediaStatus(mediaId: number, status: string) {
+  const variables = { mediaId, status };
+  try {
+    return await apolloClient.mutate({
+      mutation: UPDATE_MEDIA_PROGRESS_MUTATION,
+      variables,
+    });
+  } catch (err) {
+    if (!navigator.onLine) {
+      console.warn("Offline! Queuing status mutation...", err);
+      addToOfflineQueue('UpdateMediaProgress', variables);
+      return {
+        data: {
+          SaveMediaListEntry: {
+            status
+          }
+        }
+      };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Fetch current user's statistics from AniList
+ */
+export async function fetchUserStats() {
+  const VIEWER_STATS_QUERY = gql`
+    query {
+      Viewer {
+        id
+        statistics {
+          anime {
+            count
+            meanScore
+            minutesWatched
+            episodesWatched
+          }
+          manga {
+            count
+            meanScore
+            chaptersRead
+            volumesRead
+          }
+        }
+      }
+    }
+  `;
+
+  return apolloClient.query({
+    query: VIEWER_STATS_QUERY,
+    fetchPolicy: 'network-only',
+  });
 }

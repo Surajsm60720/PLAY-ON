@@ -36,9 +36,10 @@ import {
 import { sendNotification } from '@tauri-apps/plugin-notification';
 import { syncMangaFromAniList } from '../lib/syncService';
 import { clearDiscordActivity } from '../services/discordRPC';
-import { queueChapterDownload, queueMultipleChapters, onDownloadProgress } from '../services/downloadService';
+import { queueChapterDownload, queueMultipleChapters, onDownloadProgress, isDownloadFolderConfigured } from '../services/downloadService';
 import { Dropdown } from '../components/ui/Dropdown';
 import AniListSearchDialog from '../components/ui/AniListSearchDialog';
+import { DownloadFolderDialog } from '../components/ui/DownloadFolderDialog';
 import './MangaSourceDetails.css';
 
 function MangaSourceDetails() {
@@ -64,6 +65,10 @@ function MangaSourceDetails() {
     const [downloadFilter, setDownloadFilter] = useState<'all' | 'downloaded' | 'not-downloaded'>('all');
     // Track downloading chapters: chapterId -> boolean
     const [downloadingChapters, setDownloadingChapters] = useState<Record<string, boolean>>({});
+    // Show download folder configuration dialog
+    const [showDownloadFolderDialog, setShowDownloadFolderDialog] = useState(false);
+    // Pending download action to execute after folder is configured
+    const [pendingDownloadAction, setPendingDownloadAction] = useState<(() => void) | null>(null);
 
     // Refresh trigger for library status updates
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -92,13 +97,13 @@ function MangaSourceDetails() {
 
     useEffect(() => {
         // Listen for download progress to update UI
-        const unsubscribe = onDownloadProgress((chapterId, current, total, _status) => {
+        const unsubscribe = onDownloadProgress((chapterId, current, total, status) => {
             if (chapterId) {
                 // If starting or in progress
                 if (current < total) {
                     setDownloadingChapters(prev => ({ ...prev, [chapterId]: true }));
                 }
-                // If complete
+                // If complete (single chapter or individual update)
                 else if (current === total && current > 0) {
                     setDownloadingChapters(prev => {
                         const next = { ...prev };
@@ -106,10 +111,18 @@ function MangaSourceDetails() {
                         return next;
                     });
                     setRefreshTrigger(prev => prev + 1);
+                }
+            } else {
+                // Bulk download completion (chapterId is null)
+                if (status.includes('Downloaded') || status.includes('successfully')) {
+                    // Clear all downloading states
+                    setDownloadingChapters({});
+                    setRefreshTrigger(prev => prev + 1);
 
+                    // Send single summary notification for bulk download
                     sendNotification({
-                        title: 'Download Complete',
-                        body: 'Chapter downloaded successfully!',
+                        title: 'Bulk Download Complete',
+                        body: status,
                     });
                 }
             }
@@ -593,6 +606,47 @@ function MangaSourceDetails() {
                                 onChange={(value) => {
                                     if (!value || !sourceId || !mangaId || !manga) return;
 
+                                    // Check if download folder is configured
+                                    if (!isDownloadFolderConfigured()) {
+                                        // Store the action to execute after folder is configured
+                                        setPendingDownloadAction(() => () => {
+                                            // Re-trigger the same download action
+                                            const entryId = localEntry?.id || `${sourceId}:${mangaId}`;
+                                            let chaptersToDownload = chapters;
+
+                                            if (value === 'unread') {
+                                                chaptersToDownload = chapters.filter(ch =>
+                                                    !(localEntry && ch.number <= localEntry.chapter)
+                                                );
+                                            }
+
+                                            chaptersToDownload = chaptersToDownload.filter(ch =>
+                                                !isChapterDownloaded(entryId, ch.id)
+                                            );
+
+                                            if (chaptersToDownload.length === 0) return;
+
+                                            const sorted = [...chaptersToDownload].sort((a, b) => a.number - b.number);
+                                            const downloadingMap: Record<string, boolean> = {};
+                                            sorted.forEach(ch => { downloadingMap[ch.id] = true; });
+                                            setDownloadingChapters(prev => ({ ...prev, ...downloadingMap }));
+
+                                            const tasks = sorted.map(ch => ({
+                                                sourceId: sourceId!,
+                                                mangaId: mangaId!,
+                                                mangaTitle: manga.title,
+                                                chapterId: ch.id,
+                                                chapterNumber: ch.number,
+                                                entryId,
+                                            }));
+
+                                            queueMultipleChapters(tasks);
+                                            sendNotification({ title: 'Download Started', body: `Queued ${tasks.length} chapters` });
+                                        });
+                                        setShowDownloadFolderDialog(true);
+                                        return;
+                                    }
+
                                     const entryId = localEntry?.id || `${sourceId}:${mangaId}`;
                                     let chaptersToDownload = chapters;
 
@@ -678,6 +732,23 @@ function MangaSourceDetails() {
                                                     if (downloadingChapters[chapter.id]) return; // Prevent duplicate clicks
 
                                                     if (sourceId && mangaId && manga) {
+                                                        // Check if download folder is configured
+                                                        if (!isDownloadFolderConfigured()) {
+                                                            setPendingDownloadAction(() => () => {
+                                                                setDownloadingChapters(prev => ({ ...prev, [chapter.id]: true }));
+                                                                queueChapterDownload({
+                                                                    sourceId,
+                                                                    mangaId,
+                                                                    mangaTitle: manga.title,
+                                                                    chapterId: chapter.id,
+                                                                    chapterNumber: chapter.number,
+                                                                    entryId: entryId || `${sourceId}:${mangaId}`,
+                                                                });
+                                                            });
+                                                            setShowDownloadFolderDialog(true);
+                                                            return;
+                                                        }
+
                                                         // Optimistic UI update
                                                         setDownloadingChapters(prev => ({ ...prev, [chapter.id]: true }));
 
@@ -843,6 +914,22 @@ function MangaSourceDetails() {
                     </div>
                 </div>
             )}
+
+            {/* Download Folder Configuration Dialog */}
+            <DownloadFolderDialog
+                isOpen={showDownloadFolderDialog}
+                onClose={() => {
+                    setShowDownloadFolderDialog(false);
+                    setPendingDownloadAction(null);
+                }}
+                onConfigured={() => {
+                    // Execute pending download action if any
+                    if (pendingDownloadAction) {
+                        pendingDownloadAction();
+                        setPendingDownloadAction(null);
+                    }
+                }}
+            />
         </div>
     );
 }

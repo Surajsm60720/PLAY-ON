@@ -344,11 +344,15 @@ function MangaReader() {
         return () => container.removeEventListener('scroll', handleScroll);
     }, [readingMode, pages, loading]);
 
-    // Page tracking for single page mode
+    // Page tracking for single/double page mode
     useEffect(() => {
-        if (readingMode !== 'single' || pages.length === 0) return;
+        if (readingMode === 'vertical' || pages.length === 0) return;
 
-        const progress = (currentPage + 1) / pages.length;
+        // In double mode, currentPage + 2 gives a more accurate reading progress
+        const effectivePage = readingMode === 'double'
+            ? Math.min(currentPage + 2, pages.length)
+            : currentPage + 1;
+        const progress = effectivePage / pages.length;
         setScrollProgress(progress);
     }, [readingMode, currentPage, pages.length]);
 
@@ -423,7 +427,7 @@ function MangaReader() {
     // Keyboard navigation
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (readingMode === 'single') {
+            if (readingMode === 'single' || readingMode === 'double') {
                 if (e.key === 'ArrowRight' || e.key === 'd') {
                     goToNextPage();
                 } else if (e.key === 'ArrowLeft' || e.key === 'a') {
@@ -448,22 +452,29 @@ function MangaReader() {
     }, []);
 
     const goToNextPage = useCallback(() => {
-        if (currentPage < pages.length - 1) {
-            setCurrentPage((p) => p + 1);
+        const increment = readingMode === 'double' ? 2 : 1;
+        if (currentPage < pages.length - increment) {
+            setCurrentPage((p) => p + increment);
+        } else if (currentPage < pages.length - 1) {
+            // Handle odd pages in double mode
+            setCurrentPage(pages.length - 1);
         } else {
             // Last page, go to next chapter
             goToNextChapter();
         }
-    }, [currentPage, pages.length]);
+    }, [currentPage, pages.length, readingMode]);
 
     const goToPrevPage = useCallback(() => {
-        if (currentPage > 0) {
-            setCurrentPage((p) => p - 1);
+        const decrement = readingMode === 'double' ? 2 : 1;
+        if (currentPage >= decrement) {
+            setCurrentPage((p) => p - decrement);
+        } else if (currentPage > 0) {
+            setCurrentPage(0);
         } else {
             // First page, go to previous chapter
             goToPrevChapter();
         }
-    }, [currentPage]);
+    }, [currentPage, readingMode]);
 
     const goToNextChapter = useCallback(() => {
         if (!currentChapter || chapters.length === 0) return;
@@ -605,7 +616,8 @@ function MangaReader() {
                         onChange={(val) => setReadingMode(val as ReadingMode)}
                         options={[
                             { value: 'vertical', label: 'Vertical (Webtoon)' },
-                            { value: 'single', label: 'Single Page' }
+                            { value: 'single', label: 'Single Page' },
+                            { value: 'double', label: 'Double Page Spread' }
                         ]}
                         className="w-48"
                     />
@@ -625,6 +637,41 @@ function MangaReader() {
                                 loading="lazy"
                             />
                         ))}
+                    </div>
+                ) : readingMode === 'double' ? (
+                    <div className="double-page">
+                        <button className="nav-area prev" onClick={goToPrevPage}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M15 18l-6-6 6-6" />
+                            </svg>
+                        </button>
+
+                        <div className="double-page-container">
+                            {/* Left page (even index) */}
+                            {pages[currentPage] && (
+                                <MangaPageImage
+                                    page={pages[currentPage]}
+                                    alt={`Page ${currentPage + 1}`}
+                                    className="page-image left-page"
+                                    loading="eager"
+                                />
+                            )}
+                            {/* Right page (odd index) */}
+                            {pages[currentPage + 1] && (
+                                <MangaPageImage
+                                    page={pages[currentPage + 1]}
+                                    alt={`Page ${currentPage + 2}`}
+                                    className="page-image right-page"
+                                    loading="eager"
+                                />
+                            )}
+                        </div>
+
+                        <button className="nav-area next" onClick={goToNextPage}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M9 18l6-6-6-6" />
+                            </svg>
+                        </button>
                     </div>
                 ) : (
                     <div className="single-page">
