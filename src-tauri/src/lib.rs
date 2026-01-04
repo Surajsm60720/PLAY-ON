@@ -507,12 +507,13 @@ pub fn run() {
             update_anime_progress_command,
             progressive_search_command,
             download_image_for_notification,
+            download_image_for_notification,
             cbz_reader::get_cbz_info,
             cbz_reader::get_cbz_page,
             cbz_reader::is_valid_cbz,
             download_chapter_command
         ])
-        .setup(|app| {
+        .setup(|_app| {
             // Register deep links at runtime for development mode (Windows/Linux)
             // This is needed because deep links are only registered on install by default
             #[cfg(any(target_os = "linux", windows))]

@@ -9,6 +9,7 @@ import { AnimeStats } from '../components/anime/AnimeStats';
 import { AnimeProgressCard } from '../components/anime/AnimeProgressCard';
 import { AnimeResumeButton } from '../components/anime/AnimeResumeButton';
 
+
 function AnimeDetails() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -161,6 +162,8 @@ function AnimeDetails() {
                                 folderPath={folderMapping.folderPath}
                             />
                         )}
+
+
 
                         {/* Progress Control */}
                         <AnimeProgressCard

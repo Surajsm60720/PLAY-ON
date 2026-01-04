@@ -44,6 +44,87 @@
         },
         {
           "url": "https://*.planeptune.us/*"
+        },
+        {
+          "url": "https://hianime.to/*"
+        },
+        {
+          "url": "https://*.hianime.to/*"
+        },
+        {
+          "url": "https://animepahe.ru/*"
+        },
+        {
+          "url": "https://*.animepahe.ru/*"
+        },
+        {
+          "url": "https://animepahe.org/*"
+        },
+        {
+          "url": "https://*.animepahe.org/*"
+        },
+        {
+          "url": "https://animepahe.com/*"
+        },
+        {
+          "url": "https://*.animepahe.com/*"
+        },
+        {
+          "url": "https://kaido.to/*"
+        },
+        {
+          "url": "https://*.kaido.to/*"
+        },
+        {
+          "url": "https://animekai.to/*"
+        },
+        {
+          "url": "https://*.animekai.to/*"
+        },
+        {
+          "url": "https://gogoanime.hu/*"
+        },
+        {
+          "url": "https://*.gogoanime.hu/*"
+        },
+        {
+          "url": "https://gogoanime.gg/*"
+        },
+        {
+          "url": "https://*.gogoanime.gg/*"
+        },
+        {
+          "url": "https://gogoanime3.co/*"
+        },
+        {
+          "url": "https://*.gogoanime3.co/*"
+        },
+        {
+          "url": "https://graphql.anilist.co/*"
+        },
+        {
+          "url": "https://anilist.co/*"
+        },
+        {
+          "url": "https://*.anilist.co/*"
+        },
+        {
+          "url": "https://megacloud.tv/*"
+        },
+        {
+          "url": "https://*.megacloud.tv/*"
+        },
+        {
+          "url": "https://rapid-cloud.co/*"
+        },
+        {
+          "url": "https://*.rapid-cloud.co/*"
+        },
+        {
+          "url": "http://*"
+        },
+        {
+          "url": "https://*"
         }
       ],
       "deny": []
