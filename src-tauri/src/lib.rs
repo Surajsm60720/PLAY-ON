@@ -513,7 +513,7 @@ pub fn run() {
             cbz_reader::is_valid_cbz,
             download_chapter_command
         ])
-        .setup(|_app| {
+        .setup(|app| {
             // Register deep links at runtime for development mode (Windows/Linux)
             // This is needed because deep links are only registered on install by default
             #[cfg(any(target_os = "linux", windows))]
@@ -525,6 +525,7 @@ pub fn run() {
         })
         .register_uri_scheme_protocol("manga", |_app, request| {
             let url = request.uri().to_string();
+            println!("[Protocol] Manga Handler called for: {}", url);
             // Format: manga://localhost/path/to/file.cbz/page.jpg
             // The path might be URL encoded, so we need to decode it.
 
