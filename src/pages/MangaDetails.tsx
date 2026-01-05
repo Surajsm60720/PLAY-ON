@@ -13,14 +13,26 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchMangaDetails, updateMangaProgress } from '../api/anilistClient';
+import { fetchMangaDetails, updateMangaProgress, updateMediaStatus } from '../api/anilistClient';
 import { useMangaMappings } from '../hooks/useMangaMappings';
+import { StatusDropdown } from '../components/ui/StatusDropdown';
 import { useMalAuth } from '../context/MalAuthContext';
 import * as malClient from '../api/malClient';
 import AnimeCard from '../components/ui/AnimeCard';
 import Loading from '../components/ui/Loading';
 import { SearchIcon, BookOpenIcon, ArrowRightIcon } from '../components/ui/Icons';
 import { motion } from 'framer-motion';
+import { PlayIcon, CheckIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon } from '../components/ui/Icons';
+
+// Status options for AniList
+const STATUS_OPTIONS = [
+    { value: 'CURRENT', label: 'Reading', icon: <PlayIcon size={16} /> },
+    { value: 'COMPLETED', label: 'Completed', icon: <CheckIcon size={16} /> },
+    { value: 'PAUSED', label: 'Paused', icon: <PauseIcon size={16} /> },
+    { value: 'DROPPED', label: 'Dropped', icon: <XIcon size={16} /> },
+    { value: 'PLANNING', label: 'Planning', icon: <ClipboardIcon size={16} /> },
+    { value: 'REPEATING', label: 'Rereading', icon: <RotateCwIcon size={16} /> },
+];
 
 interface Manga {
     id: number;
@@ -94,6 +106,9 @@ function MangaDetails() {
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState(0);
     const [updating, setUpdating] = useState(false);
+    const [currentStatus, setCurrentStatus] = useState('CURRENT');
+    const [statusUpdating, setStatusUpdating] = useState(false);
+
 
     // Check if this manga is linked to a source in library
     const mangaMapping = manga ? getMappingByAnilistId(manga.id) : undefined;
@@ -108,6 +123,7 @@ function MangaDetails() {
                     setManga(data.data.Media as Manga);
                     if (data.data.Media.mediaListEntry) {
                         setProgress(data.data.Media.mediaListEntry.progress);
+                        setCurrentStatus(data.data.Media.mediaListEntry.status || 'CURRENT');
                     }
                 }
             } catch (err) {
@@ -160,6 +176,24 @@ function MangaDetails() {
             setUpdating(false);
         }
     };
+
+    const handleStatusChange = async (newStatus: string) => {
+        if (!manga || statusUpdating || newStatus === currentStatus) {
+            return;
+        }
+
+        setStatusUpdating(true);
+        try {
+            await updateMediaStatus(manga.id, newStatus);
+            setCurrentStatus(newStatus);
+        } catch (err) {
+            console.error('Failed to update status:', err);
+        } finally {
+            setStatusUpdating(false);
+        }
+    };
+
+
 
     const handleActionClick = () => {
         if (mangaMapping) {
@@ -229,6 +263,16 @@ function MangaDetails() {
                             />
                             {/* Glass Glint Overlay */}
                             <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                        </div>
+
+                        {/* Status Dropdown */}
+                        <div className="mt-4">
+                            <StatusDropdown
+                                currentStatus={currentStatus}
+                                onStatusChange={handleStatusChange}
+                                options={STATUS_OPTIONS}
+                                loading={statusUpdating}
+                            />
                         </div>
                     </div>
 
@@ -335,37 +379,43 @@ function MangaDetails() {
 
                         {/* Progress Control */}
                         <div className="p-1 rounded-2xl bg-gradient-to-r from-white/10 to-transparent p-[1px]">
-                            <div className="bg-[#121214]/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5 flex flex-col md:flex-row items-center gap-6">
-                                <div className="flex-1 w-full">
-                                    <div className="flex justify-between items-center mb-3">
-                                        <span className="font-mono text-xs text-lavender-mist uppercase tracking-widest">PROGRESS</span>
-                                        <span className="font-mono text-xl font-bold">{progress} <span className="text-white/30">/ {manga.chapters || '?'}</span></span>
-                                    </div>
-                                    <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-lavender-mist to-sky-blue relative transition-all duration-300 ease-out"
-                                            style={{ width: `${percentage}%` }}
-                                        >
-                                            <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white shadow-[0_0_10px_white]" />
+                            <div className="bg-[#121214]/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5 flex flex-col gap-4">
+                                {/* Status Row (Removed - Moved to Left Column) */}
+                                {/* Progress Row */}
+
+                                {/* Progress Row */}
+                                <div className="flex flex-col md:flex-row items-center gap-6">
+                                    <div className="flex-1 w-full">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <span className="font-mono text-xs text-lavender-mist uppercase tracking-widest">PROGRESS</span>
+                                            <span className="font-mono text-xl font-bold">{progress} <span className="text-white/30">/ {manga.chapters || '?'}</span></span>
+                                        </div>
+                                        <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-lavender-mist to-sky-blue relative transition-all duration-300 ease-out"
+                                                style={{ width: `${percentage}%` }}
+                                            >
+                                                <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white shadow-[0_0_10px_white]" />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="flex gap-2 shrink-0">
-                                    <button
-                                        disabled={progress <= 0 || updating}
-                                        onClick={() => handleProgressUpdate(progress - 1)}
-                                        className="w-12 h-12 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white disabled:opacity-30"
-                                    >
-                                        −
-                                    </button>
-                                    <button
-                                        onClick={() => handleProgressUpdate(progress + 1)}
-                                        disabled={(manga.chapters ? progress >= manga.chapters : false) || updating}
-                                        className="h-12 px-6 rounded-xl flex items-center justify-center font-bold bg-white text-black hover:bg-gray-200 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:shadow-none"
-                                    >
-                                        TRACK +1
-                                    </button>
+                                    <div className="flex gap-2 shrink-0">
+                                        <button
+                                            disabled={progress <= 0 || updating}
+                                            onClick={() => handleProgressUpdate(progress - 1)}
+                                            className="w-12 h-12 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white disabled:opacity-30"
+                                        >
+                                            −
+                                        </button>
+                                        <button
+                                            onClick={() => handleProgressUpdate(progress + 1)}
+                                            disabled={(manga.chapters ? progress >= manga.chapters : false) || updating}
+                                            className="h-12 px-6 rounded-xl flex items-center justify-center font-bold bg-white text-black hover:bg-gray-200 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:shadow-none"
+                                        >
+                                            TRACK +1
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

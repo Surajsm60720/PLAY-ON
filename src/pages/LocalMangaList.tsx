@@ -14,6 +14,7 @@ import { syncMangaFromAniList } from '../lib/syncService';
 import { PlayIcon } from '../components/ui/Icons';
 import RefreshButton from '../components/ui/RefreshButton';
 import AnimeCard from '../components/ui/AnimeCard';
+import { Dropdown } from '../components/ui/Dropdown';
 
 function LocalMangaList() {
     const [entries, setEntries] = useState<LocalMangaEntry[]>([]);
@@ -21,6 +22,7 @@ function LocalMangaList() {
     const [activeCategoryId, setActiveCategoryId] = useState<string>(getDefaultCategory());
     const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [filterStatus, setFilterStatus] = useState<'all' | 'read' | 'unread'>('all');
 
     // Add Category Dialog State
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -76,7 +78,14 @@ function LocalMangaList() {
         // 2. Search Filter
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
-            return e.title.toLowerCase().includes(query);
+            if (!e.title.toLowerCase().includes(query)) return false;
+        }
+
+        // 3. Status Filter (Read/Unread)
+        if (filterStatus === 'read') {
+            return e.status === 'completed';
+        } else if (filterStatus === 'unread') {
+            return e.status !== 'completed';
         }
 
         return true;
@@ -179,6 +188,23 @@ function LocalMangaList() {
 
                 {/* 2. Main Filter Pill (Right) */}
                 <div className="absolute right-4 top-0 pointer-events-auto flex flex-wrap items-center justify-between gap-4 py-2 px-3 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl transition-all duration-300">
+
+                    {/* Read/Unread Filter */}
+                    <div className="w-32">
+                        <Dropdown
+                            value={filterStatus}
+                            onChange={(val) => setFilterStatus(val as 'all' | 'read' | 'unread')}
+                            options={[
+                                { value: 'all', label: 'All' },
+                                { value: 'read', label: 'Read' },
+                                { value: 'unread', label: 'Unread' }
+                            ]}
+                            className="text-xs"
+                        />
+                    </div>
+
+                    <div className="w-[1px] h-6 bg-white/10"></div>
+
                     {/* Categories */}
                     <div className="flex flex-wrap items-center gap-1">
                         {categories.map(cat => {
@@ -284,29 +310,37 @@ function LocalMangaList() {
                                     onClick={() => { }}
                                     progress={entry.chapter}
                                 />
-                                {/* Resume Button */}
-                                {entry.lastReadChapterId && (
-                                    <button
-                                        className="absolute bottom-2 right-2 p-3 bg-purple-600 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 hover:scale-110 hover:bg-purple-500"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
+                                {/* Continue Reading Button */}
+                                <button
+                                    className="absolute bottom-2 right-2 p-3 bg-purple-600 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 hover:scale-110 hover:bg-purple-500"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (entry.sourceId === 'local' && entry.sourceMangaId) {
+                                            // For local manga, go to the folder to pick a chapter
+                                            navigate(`/local/${encodeURIComponent(entry.sourceMangaId)}`, { state: { type: 'MANGA' } });
+                                        } else if (entry.lastReadChapterId && entry.sourceId && entry.sourceMangaId) {
+                                            // Resume from last read chapter
                                             navigate(`/read/${entry.sourceId}/${entry.lastReadChapterId}?mangaId=${entry.sourceMangaId}&title=${encodeURIComponent(entry.title)}`);
-                                        }}
-                                        title={`Resume Chapter ${entry.chapter}`}
-                                    >
-                                        <PlayIcon size={16} fill="white" />
-                                    </button>
-                                )}
+                                        } else if (entry.sourceId && entry.sourceMangaId) {
+                                            // Go to manga details to pick a chapter
+                                            navigate(`/manga/${entry.sourceId}/${entry.sourceMangaId}`);
+                                        }
+                                    }}
+                                    title={entry.chapter > 0 ? `Continue from Chapter ${entry.chapter}` : 'Start Reading'}
+                                >
+                                    <PlayIcon size={16} fill="white" />
+                                </button>
                             </div>
                         ))}
                     </div>
                 ) : (
                     <div className="flex flex-col gap-3 pb-20">
                         {/* List Header */}
-                        <div className="grid grid-cols-[80px_1fr_100px] gap-4 px-6 py-4 text-xs font-bold text-white/40 uppercase tracking-widest border-b border-white/5 mb-4 sticky top-[72px] bg-black/40 backdrop-blur-xl z-20 rounded-xl">
+                        <div className="grid grid-cols-[80px_1fr_100px_80px] gap-4 px-6 py-4 text-xs font-bold text-white/40 uppercase tracking-widest border-b border-white/5 mb-4 sticky top-[72px] bg-black/40 backdrop-blur-xl z-20 rounded-xl">
                             <div>Cover</div>
                             <div>Title</div>
                             <div>Progress</div>
+                            <div></div>
                         </div>
                         {filteredEntries.map(entry => (
                             <div
@@ -320,7 +354,7 @@ function LocalMangaList() {
                                     }
                                 }}
                                 onContextMenu={(e) => handleContextMenu(e, entry.id)}
-                                className="glass-panel grid grid-cols-[80px_1fr_100px] gap-4 items-center p-4 rounded-2xl hover:bg-white/10 cursor-pointer transition-all duration-300 group border border-white/5 hover:border-white/20"
+                                className="glass-panel grid grid-cols-[80px_1fr_100px_80px] gap-4 items-center p-4 rounded-2xl hover:bg-white/10 cursor-pointer transition-all duration-300 group border border-white/5 hover:border-white/20"
                                 style={{ background: 'rgba(20, 20, 25, 0.4)' }}
                             >
                                 <div className="w-12 h-16 rounded-lg overflow-hidden relative shadow-md">
@@ -332,6 +366,24 @@ function LocalMangaList() {
                                 <div className="text-sm text-white/60 font-medium">
                                     <span className="text-white">{entry.chapter}</span>
                                     <span className="opacity-40"> / {entry.totalChapters || '?'}</span>
+                                </div>
+                                <div className="flex justify-end">
+                                    <button
+                                        className="p-2.5 bg-purple-600 rounded-full shadow-lg hover:scale-110 hover:bg-purple-500 transition-all duration-200"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (entry.sourceId === 'local' && entry.sourceMangaId) {
+                                                navigate(`/local/${encodeURIComponent(entry.sourceMangaId)}`, { state: { type: 'MANGA' } });
+                                            } else if (entry.lastReadChapterId && entry.sourceId && entry.sourceMangaId) {
+                                                navigate(`/read/${entry.sourceId}/${entry.lastReadChapterId}?mangaId=${entry.sourceMangaId}&title=${encodeURIComponent(entry.title)}`);
+                                            } else if (entry.sourceId && entry.sourceMangaId) {
+                                                navigate(`/manga/${entry.sourceId}/${entry.sourceMangaId}`);
+                                            }
+                                        }}
+                                        title={entry.chapter > 0 ? `Continue from Chapter ${entry.chapter}` : 'Start Reading'}
+                                    >
+                                        <PlayIcon size={14} fill="white" />
+                                    </button>
                                 </div>
                             </div>
                         ))}

@@ -5,8 +5,10 @@ import { openPath } from '@tauri-apps/plugin-opener';
 import { motion } from 'framer-motion';
 import Folder from '../components/ui/Folder';
 import AniListSearchDialog from '../components/ui/AniListSearchDialog';
+import { Dropdown } from '../components/ui/Dropdown'; // Import Dropdown
 import { useFolderMappings } from '../hooks/useFolderMappings';
 import { useAnimeData } from '../hooks/useAnimeData';
+import { useLocalMedia } from '../context/LocalMediaContext'; // Import context
 import { addMangaToLibrary } from '../lib/localMangaDb';
 import {
     FilmIcon,
@@ -111,8 +113,25 @@ function LocalFolder() {
     const [error, setError] = useState<string | null>(null);
     const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+
     const [watchedProgress, setWatchedProgress] = useState<number>(0);
     const [watchedVolumes, setWatchedVolumes] = useState<number>(0);
+
+    // Filter State
+    const [filterStatus, setFilterStatus] = useState<'all' | 'watched' | 'unwatched'>('all');
+
+    // Sorting State
+    const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('name');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+    const sortOptions = [
+        { value: 'name-asc', label: 'Name (A-Z)' },
+        { value: 'name-desc', label: 'Name (Z-A)' },
+        { value: 'date-desc', label: 'Date (Newest)' },
+        { value: 'date-asc', label: 'Date (Oldest)' },
+        { value: 'size-desc', label: 'Size (Largest)' },
+        { value: 'size-asc', label: 'Size (Smallest)' },
+    ];
 
     // Folder-to-AniList mapping hook
     const { getMappingByPath, addMapping, removeMapping } = useFolderMappings();
@@ -123,6 +142,10 @@ function LocalFolder() {
     // Decode the path from URL
     const currentPath = folderPath ? decodeURIComponent(folderPath) : '';
     const folderName = currentPath.split(/[\\/]/).pop() || '';
+
+    // Check if this is a root folder
+    const { folders } = useLocalMedia();
+    const isRootFolder = folders.some(f => f.path.replace(/\\/g, '/') === currentPath.replace(/\\/g, '/'));
 
     // Check if this folder is already linked to an anime
     const currentMapping = getMappingByPath(currentPath);
@@ -259,31 +282,9 @@ function LocalFolder() {
         );
     }
 
-    const filteredFiles = files.filter(file =>
-        file.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    const directories = filteredFiles.filter(f => f.is_dir);
-    const regularFiles = filteredFiles.filter(f => !f.is_dir);
-
-    // Group files
+    // Sort logic handled by backend (natord), but groups maintain relative order
     const VOL_REGEX = /(?:^|[_\W])(?:Vol|Volume)(?:\.|)\s*(\d+)/i;
     const CH_REGEX = /(?:^|[_\W])(?:Ch|Chapter)(?:\.|)\s*(\d+)/i;
-
-    const mangaFiles = regularFiles.filter(f => isMangaFile(f.name));
-    const otherFiles = regularFiles.filter(f => !isMangaFile(f.name));
-
-    const volumeFiles = mangaFiles.filter(f => VOL_REGEX.test(f.name) && !CH_REGEX.test(f.name));
-    const chapterFiles = mangaFiles.filter(f => !volumeFiles.includes(f));
-
-    // Sort logic handled by backend (natord), but groups maintain relative order
-
-    // Mock items to put "inside" the folders
-    const mockFolderItems = [
-        <div key="1" className="w-full h-full bg-gray-200 flex items-center justify-center text-xs text-gray-500"><FilmIcon size={12} /></div>,
-        <div key="2" className="w-full h-full bg-gray-300 flex items-center justify-center text-xs text-gray-600"><FolderIcon size={12} /></div>,
-        <div key="3" className="w-full h-full bg-gray-200 flex items-center justify-center text-xs text-gray-500"><FileIcon size={12} /></div>
-    ];
 
     // Helper to check if file is watched
     const isFileWatched = (filename: string): boolean => {
@@ -358,6 +359,54 @@ function LocalFolder() {
 
         return false;
     };
+
+    const filteredFiles = files.filter(file => {
+        // 1. Search Filter
+        if (!file.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+
+        // 2. Status Filter
+        if (filterStatus === 'watched') {
+            return isFileWatched(file.name);
+        } else if (filterStatus === 'unwatched') {
+            return !isFileWatched(file.name);
+        }
+
+        return true;
+    }).sort((a, b) => {
+        let res = 0;
+        switch (sortBy) {
+            case 'name':
+                // Use natural sort for names to handle numbers correctly (v1, v2, v10)
+                res = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+                break;
+            case 'date':
+                res = (a.last_modified || 0) - (b.last_modified || 0);
+                break;
+            case 'size':
+                res = (a.size || 0) - (b.size || 0);
+                break;
+        }
+        return sortOrder === 'asc' ? res : -res;
+    });
+
+    const directories = filteredFiles.filter(f => f.is_dir);
+    const regularFiles = filteredFiles.filter(f => !f.is_dir);
+
+    // Group files
+    const mangaFiles = regularFiles.filter(f => isMangaFile(f.name));
+    const otherFiles = regularFiles.filter(f => !isMangaFile(f.name));
+
+    const volumeFiles = mangaFiles.filter(f => VOL_REGEX.test(f.name) && !CH_REGEX.test(f.name));
+    const chapterFiles = mangaFiles.filter(f => !volumeFiles.includes(f));
+
+    // Sort logic handled by backend (natord), but groups maintain relative order
+
+    // Mock items to put "inside" the folders
+    const mockFolderItems = [
+        <div key="1" className="w-full h-full bg-gray-200 flex items-center justify-center text-xs text-gray-500"><FilmIcon size={12} /></div>,
+        <div key="2" className="w-full h-full bg-gray-300 flex items-center justify-center text-xs text-gray-600"><FolderIcon size={12} /></div>,
+        <div key="3" className="w-full h-full bg-gray-200 flex items-center justify-center text-xs text-gray-500"><FileIcon size={12} /></div>
+    ];
 
     // Animation variants
     const containerVariants = {
@@ -480,7 +529,7 @@ function LocalFolder() {
                         {currentPath}
                     </p>
 
-                    {/* AniList Tracking Section */}
+                    {/* AniList Tracking Section - Hide if Root Folder and not mapped */}
                     {currentMapping ? (
                         <div
                             className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10"
@@ -530,7 +579,7 @@ function LocalFolder() {
                                 Unlink
                             </button>
                         </div>
-                    ) : (
+                    ) : !isRootFolder && (
                         <button
                             onClick={() => setIsSearchDialogOpen(true)}
                             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-105"
@@ -546,18 +595,51 @@ function LocalFolder() {
                     )}
                 </div>
 
-                {/* Search Bar */}
-                <div className="relative group mb-1">
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Filter files..."
-                        className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm font-medium w-64 focus:bg-white/10 focus:border-white/20 outline-none transition-all duration-300 placeholder-white/30"
-                        style={{ fontFamily: 'var(--font-rounded)' }}
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <div className="flex gap-4 items-center">
+                    {/* Filter Dropdown - Hide if Root Folder */}
+                    {!isRootFolder && (
+                        <div className="w-32 relative z-20">
+                            <Dropdown
+                                value={filterStatus}
+                                options={[
+                                    { value: 'all', label: 'All' },
+                                    { value: 'watched', label: 'Watched' },
+                                    { value: 'unwatched', label: 'Unwatched' },
+                                ]}
+                                onChange={(val) => setFilterStatus(val as any)}
+                                icon={null} // Optional icon
+                            />
+                        </div>
+                    )}
+
+                    {/* Sorting Dropdown */}
+                    <div className="w-40 relative z-20">
+                        <Dropdown
+                            value={`${sortBy}-${sortOrder}`}
+                            options={sortOptions}
+                            onChange={(val) => {
+                                const [by, order] = val.split('-');
+                                setSortBy(by as any);
+                                setSortOrder(order as any);
+                            }}
+                        />
+                    </div>
+
+                    <div className="w-[1px] h-8 bg-white/10 mx-2"></div>
+
+                    {/* Search Bar */}
+                    <div className="relative group mb-1">
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Filter files..."
+                            className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm font-medium w-64 focus:bg-white/10 focus:border-white/20 outline-none transition-all duration-300 placeholder-white/30"
+                            style={{ fontFamily: 'var(--font-rounded)' }}
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </div>
                     </div>
                 </div>
             </div>

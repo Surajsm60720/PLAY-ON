@@ -5,7 +5,7 @@ import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
 import { useLocalMedia } from '../../context/LocalMediaContext';
 import SidebarItem from './SidebarItem';
-import { HistoryIcon, HomeIcon, FolderIcon, SettingsIcon, LibraryIcon, CompassIcon, FilmIcon, PlayIcon } from '../ui/Icons';
+import { HistoryIcon, HomeIcon, FolderIcon, SettingsIcon, LibraryIcon, CompassIcon, FilmIcon, PlayIcon, ChartIcon } from '../ui/Icons';
 import UserProfileDialog from '../ui/UserProfileDialog';
 
 interface SidebarNavItem {
@@ -34,6 +34,7 @@ function Sidebar({ width: _width }: SidebarProps) {
 
     const animeSection: SidebarNavItem[] = [
         { label: 'Anime List', path: '/anime-list', icon: <FilmIcon size={20} /> },
+        { label: 'Statistics', path: '/statistics', icon: <ChartIcon size={20} /> },
     ];
 
     const mangaSection: SidebarNavItem[] = [

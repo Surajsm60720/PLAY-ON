@@ -11,9 +11,11 @@ import * as malClient from '../api/malClient';
 import { updateMangaProgress } from '../lib/localMangaDb';
 import { syncMangaEntryToAniList } from '../lib/syncService';
 import { updateMangaActivity, clearDiscordActivity, setMangaReadingState } from '../services/discordRPC';
+import { Dropdown } from '../components/ui/Dropdown';
 import './MangaReader.css';
 
 type SyncStatus = 'idle' | 'tracking' | 'saving' | 'syncing' | 'synced' | 'error';
+type ReadingMode = 'vertical' | 'single' | 'double';
 
 function LocalFileReader() {
     const [searchParams] = useSearchParams();
@@ -30,10 +32,14 @@ function LocalFileReader() {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [zoom, setZoom] = useState(100);
 
+    // Reading State
+    const [readingMode, setReadingMode] = useState<ReadingMode>('vertical');
+    const [currentPage, setCurrentPage] = useState(0);
+    const [showControls, setShowControls] = useState(true);
+
     const containerRef = useRef<HTMLDivElement>(null);
     const virtuosoRef = useRef<VirtuosoHandle>(null);
 
-    const [showControls, setShowControls] = useState(true);
 
     // Tracking
     const [mapping, setMapping] = useState<ReturnType<typeof getMappingForFilePath>>(undefined);
@@ -192,12 +198,23 @@ function LocalFileReader() {
         return () => { isMounted = false; };
     }, [filePath]);
 
-    // Handle scroll for 80% completion
+    // Scroll tracking for vertical mode
     const handleScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
         const target = e.currentTarget as HTMLElement;
         const progress = target.scrollTop / (target.scrollHeight - target.clientHeight);
         setScrollProgress(progress);
     }, []);
+
+    // Page tracking for single/double page mode
+    useEffect(() => {
+        if (readingMode === 'vertical' || pages.length === 0) return;
+
+        const effectivePage = readingMode === 'double'
+            ? Math.min(currentPage + 2, pages.length)
+            : currentPage + 1;
+        const progress = effectivePage / pages.length;
+        setScrollProgress(progress);
+    }, [readingMode, currentPage, pages.length]);
 
     // Sync effect
     useEffect(() => {
@@ -270,13 +287,24 @@ function LocalFileReader() {
     // Keyboard navigation
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                if (isFullscreen) {
-                    toggleFullscreen();
-                } else {
-                    navigate(-1);
+            if (readingMode === 'single' || readingMode === 'double') {
+                if (e.key === 'ArrowRight' || e.key === 'd') {
+                    goToNextPage();
+                } else if (e.key === 'ArrowLeft' || e.key === 'a') {
+                    goToPrevPage();
                 }
-            } else if (e.key === '+' || e.key === '=') {
+            } else if (readingMode === 'vertical') {
+                if (e.key === 'Escape') {
+                    if (isFullscreen) {
+                        toggleFullscreen();
+                    } else {
+                        navigate(-1);
+                    }
+                }
+            }
+
+            // Zoom controls
+            if (e.key === '+' || e.key === '=') {
                 setZoom(prev => Math.min(prev + 10, 200));
             } else if (e.key === '-') {
                 setZoom(prev => Math.max(prev - 10, 50));
@@ -285,7 +313,7 @@ function LocalFileReader() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isFullscreen, navigate]);
+    }, [readingMode, currentPage, pages.length, isFullscreen, navigate]);
 
     const toggleFullscreen = async () => {
         const appWindow = getCurrentWindow();
@@ -293,6 +321,32 @@ function LocalFileReader() {
         await appWindow.setFullscreen(!fullscreen);
         setIsFullscreen(!fullscreen);
     };
+
+    const toggleControls = useCallback(() => {
+        setShowControls(prev => !prev);
+    }, []);
+
+    const goToNextPage = useCallback(() => {
+        const increment = readingMode === 'double' ? 2 : 1;
+        if (currentPage < pages.length - increment) {
+            setCurrentPage((p) => p + increment);
+        } else if (currentPage < pages.length - 1) {
+            // Handle odd pages in double mode
+            setCurrentPage(pages.length - 1);
+        }
+    }, [currentPage, pages.length, readingMode]);
+
+    const goToPrevPage = useCallback(() => {
+        const decrement = readingMode === 'double' ? 2 : 1;
+        if (currentPage >= decrement) {
+            setCurrentPage((p) => p - decrement);
+        } else if (currentPage > 0) {
+            setCurrentPage(0);
+        }
+    }, [currentPage, readingMode]);
+
+    const handleZoomIn = () => setZoom(z => Math.min(z + 10, 200));
+    const handleZoomOut = () => setZoom(z => Math.max(z - 10, 50));
 
     // Sync Status UI
     const getSyncStatusDisplay = () => {
@@ -361,52 +415,133 @@ function LocalFileReader() {
                 <div className="reader-settings">
                     {getSyncStatusDisplay()}
 
-                    <div className="zoom-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.3)', padding: '4px 8px', borderRadius: '8px' }}>
-                        <button className="control-btn" onClick={() => setZoom(prev => Math.max(prev - 10, 50))} title="Zoom Out">−</button>
-                        <span className="zoom-level" style={{ minWidth: '40px', textAlign: 'center' }}>{zoom}%</span>
-                        <button className="control-btn" onClick={() => setZoom(prev => Math.min(prev + 10, 200))} title="Zoom In">+</button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="reader-content vertical" onClick={() => setShowControls(prev => !prev)}>
-                <div className="vertical-scroll" style={{ maxWidth: `${zoom}%`, width: '100%' }}>
-                    <Virtuoso
-                        ref={virtuosoRef}
-                        style={{ height: '100%', width: '100%' }}
-                        data={pages}
-                        atBottomThreshold={200}
-                        onScroll={handleScroll}
-                        itemContent={(index: number, pageUrl: string) => (
-                            <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-                                {pageUrl ? (
-                                    <img
-                                        src={pageUrl}
-                                        alt={`Page ${index + 1}`}
-                                        className="page-image"
-                                        style={{ width: '100%', height: 'auto', display: 'block' }}
-                                        loading="lazy"
-                                    />
-                                ) : (
-                                    <div className="page-placeholder" style={{ height: '600px', width: '100%', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
-                                        Loading Page {index + 1}...
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                    <Dropdown
+                        value={readingMode}
+                        onChange={(val) => setReadingMode(val as ReadingMode)}
+                        options={[
+                            { value: 'vertical', label: 'Vertical (Webtoon)' },
+                            { value: 'single', label: 'Single Page' },
+                            { value: 'double', label: 'Double Page Spread' }
+                        ]}
+                        className="w-48"
                     />
                 </div>
             </div>
 
+            {/* Main Content */}
+            <div className={`reader-content ${readingMode}`} onClick={toggleControls}>
+                {readingMode === 'vertical' ? (
+                    <div className="vertical-scroll" style={{ maxWidth: `${zoom}%`, width: '100%' }}>
+                        <Virtuoso
+                            ref={virtuosoRef}
+                            style={{ height: '100%', width: '100%' }}
+                            data={pages}
+                            atBottomThreshold={200}
+                            onScroll={handleScroll}
+                            itemContent={(index: number, pageUrl: string) => (
+                                <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                                    {pageUrl ? (
+                                        <img
+                                            src={pageUrl}
+                                            alt={`Page ${index + 1}`}
+                                            className="page-image"
+                                            style={{ width: '100%', height: 'auto', display: 'block' }}
+                                            loading="lazy"
+                                        />
+                                    ) : (
+                                        <div className="page-placeholder" style={{ height: '600px', width: '100%', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+                                            Loading Page {index + 1}...
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        />
+                    </div>
+                ) : readingMode === 'double' ? (
+                    <div className="double-page">
+                        <button className="nav-area prev" onClick={(e) => { e.stopPropagation(); goToPrevPage(); }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M15 18l-6-6 6-6" />
+                            </svg>
+                        </button>
+
+                        <div className="double-page-container">
+                            {/* Left page */}
+                            {pages[currentPage] && (
+                                <img
+                                    src={pages[currentPage]}
+                                    alt={`Page ${currentPage + 1}`}
+                                    className="page-image left-page"
+                                    loading="eager"
+                                />
+                            )}
+                            {/* Right page */}
+                            {pages[currentPage + 1] && (
+                                <img
+                                    src={pages[currentPage + 1]}
+                                    alt={`Page ${currentPage + 2}`}
+                                    className="page-image right-page"
+                                    loading="eager"
+                                />
+                            )}
+                        </div>
+
+                        <button className="nav-area next" onClick={(e) => { e.stopPropagation(); goToNextPage(); }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M9 18l6-6-6-6" />
+                            </svg>
+                        </button>
+                    </div>
+                ) : (
+                    <div className="single-page">
+                        <button className="nav-area prev" onClick={(e) => { e.stopPropagation(); goToPrevPage(); }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M15 18l-6-6 6-6" />
+                            </svg>
+                        </button>
+
+                        {pages[currentPage] && (
+                            <img
+                                src={pages[currentPage]}
+                                alt={`Page ${currentPage + 1}`}
+                                className="page-image"
+                                loading="eager"
+                            />
+                        )}
+
+                        <button className="nav-area next" onClick={(e) => { e.stopPropagation(); goToNextPage(); }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M9 18l6-6-6-6" />
+                            </svg>
+                        </button>
+                    </div>
+                )}
+            </div>
+
             {/* Bottom Controls */}
             <div className={`reader-controls-bottom ${showControls ? 'visible' : ''}`}>
+                <div className="control-group left">
+                    <button className="control-btn" onClick={handleZoomOut} title="Zoom Out">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <span className="zoom-level">{zoom}%</span>
+                    <button className="control-btn" onClick={handleZoomIn} title="Zoom In">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                </div>
+
                 {/* Page Indicator */}
                 <div className="control-group center">
                     <div className="page-indicator">
-                        <span>{Math.round(scrollProgress * 100)}%</span>
-                        <span className="separator">•</span>
-                        <span>{pages.length} Pages</span>
+                        {readingMode === 'vertical' ? (
+                            <span>{Math.round(scrollProgress * 100)}%</span>
+                        ) : (
+                            <>
+                                <span>{currentPage + 1}</span>
+                                <span className="separator">/</span>
+                                <span>{pages.length}</span>
+                            </>
+                        )}
                     </div>
                 </div>
 

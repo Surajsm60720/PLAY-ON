@@ -246,6 +246,7 @@ function IntegrationsSettings() {
 // ============================================================================
 
 function MangaSettings() {
+    const { settings, updateSetting } = useSettings();
     const [, setForceUpdate] = useState(0);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
@@ -291,6 +292,60 @@ function MangaSettings() {
             <p className="settings-section-description">
                 Manga preferences and library tools
             </p>
+
+            <div className="setting-group">
+                <h3 className="setting-group-title">Downloads</h3>
+
+                <SettingRow label="Manga Download Path" description="Where to save downloaded chapters">
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
+                        <input
+                            type="text"
+                            value={settings.mangaDownloadPath || ''}
+                            readOnly
+                            placeholder="Not configured"
+                            style={{
+                                flexGrow: 1,
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                color: 'var(--color-text-main)',
+                                fontSize: '13px',
+                                fontFamily: 'var(--font-mono)'
+                            }}
+                        />
+                        <button className="setting-button" onClick={async () => {
+                            try {
+                                const selected = await open({
+                                    directory: true,
+                                    multiple: false,
+                                    defaultPath: settings.mangaDownloadPath || undefined,
+                                });
+                                if (selected) {
+                                    updateSetting('mangaDownloadPath', selected as string);
+                                }
+                            } catch (err) {
+                                console.error("Failed to open dialog", err);
+                            }
+                        }}>
+                            Browse
+                        </button>
+                        {settings.mangaDownloadPath && (
+                            <button
+                                className="setting-button danger"
+                                onClick={() => {
+                                    if (confirm('Clear the download path? You will need to configure it again to download manga.')) {
+                                        updateSetting('mangaDownloadPath', '');
+                                    }
+                                }}
+                                title="Clear download path"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                </SettingRow>
+            </div>
 
             <div className="setting-group">
                 <h3 className="setting-group-title">Preferences</h3>
@@ -421,47 +476,6 @@ function StorageSettings() {
                         </div>
                     )}
                 </div>
-            </div>
-
-            <div className="setting-group">
-                <h3 className="setting-group-title">Downloads</h3>
-
-                <SettingRow label="Manga Download Path" description="Where to save downloaded chapters">
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
-                        <input
-                            type="text"
-                            value={settings.mangaDownloadPath || ''}
-                            readOnly
-                            placeholder="Not configured"
-                            style={{
-                                flexGrow: 1,
-                                padding: '8px 12px',
-                                borderRadius: '8px',
-                                background: 'rgba(255,255,255,0.05)',
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                color: 'var(--color-text-main)',
-                                fontSize: '13px',
-                                fontFamily: 'var(--font-mono)'
-                            }}
-                        />
-                        <button className="setting-button" onClick={async () => {
-                            try {
-                                const selected = await open({
-                                    directory: true,
-                                    multiple: false,
-                                    defaultPath: settings.mangaDownloadPath || undefined,
-                                });
-                                if (selected) {
-                                    updateSetting('mangaDownloadPath', selected as string);
-                                }
-                            } catch (err) {
-                                console.error("Failed to open dialog", err);
-                            }
-                        }}>
-                            Browse
-                        </button>
-                    </div>
-                </SettingRow>
             </div>
 
             <div className="setting-group">

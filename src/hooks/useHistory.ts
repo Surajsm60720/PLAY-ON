@@ -11,6 +11,8 @@ export interface HistoryItem {
     anime: string;
     image: string;
     timestamp: number;
+    mediaId: number;
+    mediaType: string;
 }
 
 export interface HistoryGroup {
@@ -63,7 +65,9 @@ export function useHistory() {
                 time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 anime: activity.media.title.english || activity.media.title.romaji,
                 image: activity.media.coverImage.medium,
-                timestamp: activity.createdAt
+                timestamp: activity.createdAt,
+                mediaId: activity.media.id,
+                mediaType: activity.media.type
             });
         });
 

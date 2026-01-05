@@ -172,7 +172,7 @@ export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color, o
 interface SectionHeaderProps {
     title: string;
     subtitle?: string;
-    icon?: string;
+    icon?: React.ReactNode;
     className?: string;
 }
 
