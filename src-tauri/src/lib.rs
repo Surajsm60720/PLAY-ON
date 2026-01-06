@@ -27,6 +27,10 @@ use win_name as platform_window;
 #[cfg(target_os = "macos")]
 use mac_name as platform_window;
 
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+};
 use tauri::{Emitter, Manager};
 
 /// Tauri command to search for anime on AniList
@@ -466,6 +470,15 @@ fn md5_hash(s: &str) -> u64 {
     hasher.finish()
 }
 
+/// Tauri command to hide the main window (minimize to tray)
+#[tauri::command]
+async fn hide_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -511,7 +524,8 @@ pub fn run() {
             cbz_reader::get_cbz_info,
             cbz_reader::get_cbz_page,
             cbz_reader::is_valid_cbz,
-            download_chapter_command
+            download_chapter_command,
+            hide_window
         ])
         .setup(|app| {
             // Register deep links at runtime for development mode (Windows/Linux)
@@ -521,6 +535,48 @@ pub fn run() {
                 use tauri_plugin_deep_link::DeepLinkExt;
                 app.deep_link().register_all()?;
             }
+
+            // === System Tray Setup ===
+            // Create tray menu items
+            let show_item = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+
+            // Create the tray menu
+            let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
+
+            // Build the tray icon
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    // Show window on left click
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        if let Some(window) = tray.app_handle().get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
             Ok(())
         })
         .register_uri_scheme_protocol("manga", |_app, request| {

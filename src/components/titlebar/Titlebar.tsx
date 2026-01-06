@@ -1,4 +1,5 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { invoke } from '@tauri-apps/api/core';
 
 /**
  * Custom Titlebar Component
@@ -11,7 +12,10 @@ function Titlebar() {
 
     const handleMinimize = async () => { await appWindow.minimize(); };
     const handleMaximize = async () => { await appWindow.toggleMaximize(); };
-    const handleClose = async () => { await appWindow.close(); };
+    const handleClose = async () => {
+        // Hide to tray instead of closing
+        await invoke('hide_window');
+    };
 
     return (
         <div
