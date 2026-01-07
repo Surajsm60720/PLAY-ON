@@ -1,0 +1,24 @@
+{
+    "name": "PLAY-ON! Sample Repository",
+    "description": "A sample extension repository for testing the dynamic extension system",
+    "extensions": [
+        {
+            "id": "weebcentral",
+            "name": "WeebCentral",
+            "version": "1.0.0",
+            "lang": "en",
+            "nsfw": false,
+            "iconUrl": "https://weebcentral.com/favicon.ico",
+            "bundleUrl": "weebcentral.js"
+        },
+        {
+            "id": "mangareader",
+            "name": "MangaReader",
+            "version": "1.0.0",
+            "lang": "en",
+            "nsfw": false,
+            "iconUrl": "https://mangareader.to/favicon.ico",
+            "bundleUrl": "mangareader.js"
+        }
+    ]
+}

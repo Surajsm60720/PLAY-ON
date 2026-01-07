@@ -30,6 +30,9 @@ export interface Settings {
     discordPrivacyLevel: 'full' | 'minimal' | 'hidden';
     anilistAutoSync: boolean;
 
+    // Window Behavior
+    closeToTray: boolean; // When true, close button minimizes to tray; when false, quits app
+
     // Storage
     scanDepth: number;
     ignoredTerms: string[];
@@ -69,6 +72,9 @@ const DEFAULT_SETTINGS: Settings = {
     discordRpcEnabled: true,
     discordPrivacyLevel: 'full',
     anilistAutoSync: true,
+
+    // Window Behavior
+    closeToTray: true, // Default: minimize to tray on close
 
     // Storage
     scanDepth: 3,

@@ -1,47 +1,171 @@
+/**
+ * ====================================================================
+ * EXTENSION LOADER
+ * ====================================================================
+ * 
+ * Dynamically loads installed extensions from ExtensionStorage.
+ * Executes bundled JavaScript to create MangaSource instances.
+ * 
+ * This replaces the hardcoded extension loading with a dynamic system
+ * where users can install extensions from external repositories.
+ * ====================================================================
+ */
+
 import { Extension } from './types';
-// In the future, this would load from a file/URL.
-// For now, we will import "built-in" external extensions here.
-import { WeebCentralExtension } from '../../extensions/weebcentral';
+import { ExtensionStorage } from './ExtensionStorage';
+import { fetch } from '@tauri-apps/plugin-http';
 
 class ExtensionLoaderService {
     private loadedExtensions: Map<string, Extension> = new Map();
+    private initialized: boolean = false;
 
-    constructor() {
-        // Load initial extensions
-        this.loadLocalExtensions();
+    /**
+     * Initialize the loader - load all enabled extensions from storage
+     */
+    async initialize(): Promise<void> {
+        if (this.initialized) return;
+
+        console.log('[ExtensionLoader] Initializing...');
+
+        // Load enabled extensions from storage
+        const enabledExtensions = ExtensionStorage.getEnabledExtensions();
+        console.log(`[ExtensionLoader] Found ${enabledExtensions.length} enabled extensions in storage`);
+
+        // Debug: Log all installed extensions (including disabled)
+        const allExtensions = ExtensionStorage.getAllExtensions();
+        console.log(`[ExtensionLoader] Total installed extensions: ${allExtensions.length}`);
+        allExtensions.forEach(ext => {
+            console.log(`[ExtensionLoader]   - ${ext.name} (${ext.id}): enabled=${ext.enabled}, bundleCode length=${ext.bundleCode?.length || 0}`);
+        });
+
+        for (const installed of enabledExtensions) {
+            try {
+                console.log(`[ExtensionLoader] Executing bundle for ${installed.id}...`);
+                const extension = this.executeBundle(installed.bundleCode, installed.id);
+                if (extension) {
+                    this.loadedExtensions.set(installed.id, extension);
+                    console.log(`[ExtensionLoader] ✓ Loaded: ${extension.name} v${extension.version}`);
+                } else {
+                    console.error(`[ExtensionLoader] ✗ Bundle execution returned null for ${installed.id}`);
+                }
+            } catch (error) {
+                console.error(`[ExtensionLoader] ✗ Failed to load ${installed.id}:`, error);
+            }
+        }
+
+        this.initialized = true;
+        console.log(`[ExtensionLoader] Initialization complete. ${this.loadedExtensions.size} extensions loaded.`);
     }
 
-    private loadLocalExtensions() {
-        console.log('[ExtensionLoader] Loading local extensions...');
-
-        // In a real dynamic system, we would scan a directory specific to the OS.
-        // For this hybrid approach, we explicitly register our 'external' extensions.
-
-        // WeebCentral
+    /**
+     * Execute a bundled JavaScript extension and return the MangaSource
+     */
+    private executeBundle(code: string, id: string): Extension | null {
         try {
-            this.loadExtension(WeebCentralExtension);
-        } catch (e) {
-            console.error('[ExtensionLoader] Failed to load WeebCentral:', e);
+            console.log(`[ExtensionLoader] executeBundle called for ${id}, code length: ${code?.length || 0}`);
+
+            if (!code || code.length === 0) {
+                console.error(`[ExtensionLoader] Empty bundle code for ${id}`);
+                return null;
+            }
+
+            // The bundle code should be: "return { id, name, search, ... };"
+            // We create a function that accepts 'fetch' as a parameter and contains the bundle code
+            // When called with the actual fetch, it returns the extension object
+            console.log(`[ExtensionLoader] Creating function from bundle...`);
+
+            // new Function('fetch', code) creates: function(fetch) { return { ... }; }
+            const extensionFactory = new Function('fetch', code);
+            console.log(`[ExtensionLoader] Factory created, type: ${typeof extensionFactory}`);
+
+            // Call the factory with the fetch API
+            const extension = extensionFactory(fetch);
+            console.log(`[ExtensionLoader] Extension created:`, extension ? `id=${extension.id}, name=${extension.name}` : 'null');
+
+            // Validate the returned object has required methods
+            if (!extension || typeof extension.search !== 'function') {
+                console.error(`[ExtensionLoader] Invalid extension bundle for ${id}: missing required methods`);
+                console.error(`[ExtensionLoader] Extension object:`, extension);
+                console.error(`[ExtensionLoader] search type:`, typeof extension?.search);
+                return null;
+            }
+
+            // Ensure id matches
+            if (extension.id !== id) {
+                console.warn(`[ExtensionLoader] Extension id mismatch: expected ${id}, got ${extension.id}`);
+                extension.id = id;
+            }
+
+            console.log(`[ExtensionLoader] Successfully executed bundle for ${id}`);
+            return extension as Extension;
+        } catch (error) {
+            console.error(`[ExtensionLoader] Failed to execute bundle for ${id}:`, error);
+            console.error(`[ExtensionLoader] Stack:`, (error as Error).stack);
+            return null;
         }
     }
 
-    public loadExtension(extension: Extension) {
-        if (this.loadedExtensions.has(extension.id)) {
-            console.warn(`[ExtensionLoader] Extension ${extension.id} already loaded.`);
-            return;
+    /**
+     * Load a single extension dynamically (after install)
+     */
+    loadExtension(id: string): Extension | null {
+        const installed = ExtensionStorage.getExtension(id);
+        if (!installed || !installed.enabled) {
+            return null;
         }
 
-        console.log(`[ExtensionLoader] Loaded extension: ${extension.name} v${extension.version}`);
-        this.loadedExtensions.set(extension.id, extension);
+        try {
+            const extension = this.executeBundle(installed.bundleCode, id);
+            if (extension) {
+                this.loadedExtensions.set(id, extension);
+                console.log(`[ExtensionLoader] Dynamically loaded: ${extension.name}`);
+                return extension;
+            }
+        } catch (error) {
+            console.error(`[ExtensionLoader] Failed to load ${id}:`, error);
+        }
+        return null;
     }
 
-    public getExtensions(): Extension[] {
+    /**
+     * Unload an extension (after uninstall or disable)
+     */
+    unloadExtension(id: string): void {
+        if (this.loadedExtensions.delete(id)) {
+            console.log(`[ExtensionLoader] Unloaded: ${id}`);
+        }
+    }
+
+    /**
+     * Reload all extensions from storage
+     */
+    async reload(): Promise<void> {
+        this.loadedExtensions.clear();
+        this.initialized = false;
+        await this.initialize();
+    }
+
+    /**
+     * Get all loaded extensions
+     */
+    getExtensions(): Extension[] {
         return Array.from(this.loadedExtensions.values());
     }
 
-    public getExtension(id: string): Extension | undefined {
+    /**
+     * Get a specific extension by ID
+     */
+    getExtension(id: string): Extension | undefined {
         return this.loadedExtensions.get(id);
+    }
+
+    /**
+     * Check if an extension is loaded
+     */
+    isLoaded(id: string): boolean {
+        return this.loadedExtensions.has(id);
     }
 }
 
 export const ExtensionLoader = new ExtensionLoaderService();
+

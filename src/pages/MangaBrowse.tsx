@@ -17,14 +17,32 @@ function MangaBrowse() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
 
-    // Get all available sources
-    const sources = useMemo(() => ExtensionManager.getAllSources(), []);
+    // Get all available sources - use state so it updates when extensions change
+    const [sources, setSources] = useState(() => ExtensionManager.getAllSources());
+
+    // Refresh sources when component mounts (extensions may have been installed)
+    useEffect(() => {
+        const refreshSources = () => {
+            const newSources = ExtensionManager.getAllSources();
+            console.log('[MangaBrowse] Refreshing sources, found:', newSources.length);
+            setSources(newSources);
+        };
+
+        // Initial load
+        refreshSources();
+
+        // Set up a listener for extension changes (polling for now)
+        // In a real app, you'd use an event emitter pattern
+        const interval = setInterval(refreshSources, 2000);
+
+        return () => clearInterval(interval);
+    }, []);
 
     // Current source (default to first available)
     const currentSourceId = searchParams.get('source') || sources[0]?.id || '';
     const currentSource = useMemo(
         () => ExtensionManager.getSource(currentSourceId),
-        [currentSourceId]
+        [currentSourceId, sources] // Re-compute when sources change
     );
 
     const [query, setQuery] = useState(searchParams.get('q') || '');

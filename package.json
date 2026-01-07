@@ -1,7 +1,7 @@
 {
   "name": "play-on",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
   "dependencies": {
     "@apollo/client": "^3.12.4",
     "@consumet/extensions": "^1.8.7",
+    "@gsap/react": "^2.1.2",
     "@tailwindcss/postcss": "^4.1.18",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-deep-link": "^2.4.5",

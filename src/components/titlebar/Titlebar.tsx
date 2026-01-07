@@ -1,5 +1,7 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
+import { exit } from '@tauri-apps/plugin-process';
+import { useSettings } from '../../context/SettingsContext';
 
 /**
  * Custom Titlebar Component
@@ -9,12 +11,18 @@ import { invoke } from '@tauri-apps/api/core';
  */
 function Titlebar() {
     const appWindow = getCurrentWindow();
+    const { settings } = useSettings();
 
     const handleMinimize = async () => { await appWindow.minimize(); };
     const handleMaximize = async () => { await appWindow.toggleMaximize(); };
     const handleClose = async () => {
-        // Hide to tray instead of closing
-        await invoke('hide_window');
+        if (settings.closeToTray) {
+            // Hide to tray instead of closing
+            await invoke('hide_window');
+        } else {
+            // Quit completely
+            await exit(0);
+        }
     };
 
     return (

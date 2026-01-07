@@ -15,20 +15,22 @@ import {
     LinkIcon,
     BookIcon,
     FolderIcon,
-    WrenchIcon
+    WrenchIcon,
+    PuzzleIcon
 } from '../components/ui/Icons';
 import { DEFAULT_KEYBOARD_SHORTCUTS, ShortcutAction } from '../context/SettingsContext';
 import { formatShortcutFromEvent } from '../hooks/useKeyboardShortcuts';
 import { Dropdown } from '../components/ui/Dropdown';
 import './Settings.css';
 import TrackerConnections from '../components/settings/TrackerConnections';
+import ExtensionsSettings from '../components/settings/ExtensionsSettings';
 
 // ============================================================================
 // SETTINGS PAGE
 // Comprehensive settings interface with 5 categories
 // ============================================================================
 
-type TabId = 'general' | 'integrations' | 'manga' | 'storage' | 'advanced';
+type TabId = 'general' | 'integrations' | 'extensions' | 'manga' | 'storage' | 'advanced';
 
 interface Tab {
     id: TabId;
@@ -39,6 +41,7 @@ interface Tab {
 const TABS: Tab[] = [
     { id: 'general', label: 'General', icon: <SettingsIcon size={18} /> },
     { id: 'integrations', label: 'Integrations', icon: <LinkIcon size={18} /> },
+    { id: 'extensions', label: 'Extensions', icon: <PuzzleIcon size={18} /> },
     { id: 'manga', label: 'Manga', icon: <BookIcon size={18} /> },
     { id: 'storage', label: 'Storage & Library', icon: <FolderIcon size={18} /> },
     { id: 'advanced', label: 'Advanced', icon: <WrenchIcon size={18} /> },
@@ -170,6 +173,22 @@ function GeneralSettings() {
                     />
                 </SettingRow>
             </div>
+
+            {/* Window Behavior Section */}
+            <div className="setting-group">
+                <h3 className="setting-group-title">Window Behavior</h3>
+
+                <SettingRow
+                    label="Minimize to Tray on Close"
+                    description="When enabled, closing the app minimizes it to the system tray. When disabled, the app quits completely."
+                >
+                    <Toggle
+                        checked={settings.closeToTray}
+                        onChange={(checked) => updateSetting('closeToTray', checked)}
+                    />
+                </SettingRow>
+            </div>
+
             {/* Keyboard Shortcuts Section */}
             <div style={{ margin: '32px 0 16px', borderTop: '1px solid var(--color-border-subtle)' }} />
             <KeyboardSettings />
@@ -731,6 +750,8 @@ export default function Settings() {
                 return <GeneralSettings />;
             case 'integrations':
                 return <IntegrationsSettings />;
+            case 'extensions':
+                return <ExtensionsSettings />;
             case 'manga':
                 return <MangaSettings />;
             case 'storage':

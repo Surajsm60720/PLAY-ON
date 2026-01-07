@@ -170,13 +170,31 @@ import { ApolloProvider } from '@apollo/client';
 import { apolloClient } from './lib/apollo';
 import { checkAndRefreshCache } from './lib/cacheRefresh';
 import SplashScreen from './components/ui/SplashScreen';
+import { ExtensionManager } from './services/ExtensionManager';
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
   useOfflineSync();
 
-  // Startup cache refresh (v0.3.0)
+  // Debug: Check extension status on every render
+  console.log('[App RENDER] ExtensionManager initialized:', ExtensionManager.isInitialized());
+  console.log('[App RENDER] Sources:', ExtensionManager.getAllSources().length);
+
+  // Startup cache refresh (v0.3.0) and extension initialization
   useEffect(() => {
+    console.log('=== APP INITIALIZATION STARTING ===');
+
+    // Initialize extension manager (loads installed extensions from storage)
+    ExtensionManager.initialize().then(() => {
+      console.log('[App] Extension manager initialized');
+      console.log('[App] Sources available:', ExtensionManager.getAllSources().length);
+      ExtensionManager.getAllSources().forEach(s => {
+        console.log(`[App]   - ${s.name} (${s.id})`);
+      });
+    }).catch(err => {
+      console.error('[App] Failed to initialize extensions:', err);
+    });
+
     // Check if cache needs refresh (6 hour interval)
     checkAndRefreshCache().then((refreshed) => {
       if (refreshed) {
