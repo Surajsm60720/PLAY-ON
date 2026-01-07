@@ -193,9 +193,9 @@ function Home() {
     useEffect(() => {
         // Dynamic import to avoid SSR issues if any, and keep bundle size manageable
         import('../services/discordRPC').then(({ setBrowsingActivity }) => {
-            setBrowsingActivity('full');
+            setBrowsingActivity('full', user?.avatar?.medium || null, user?.name ? `Logged in as ${user.name}` : null);
         });
-    }, []);
+    }, [user]);
 
     const itemCount = windowWidth >= 1280 ? 8 : 4;
 

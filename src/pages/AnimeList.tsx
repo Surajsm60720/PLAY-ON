@@ -156,11 +156,11 @@ function AnimeList() {
     useEffect(() => {
         const updateRPC = async () => {
             const { setBrowsingActivity } = await import('../services/discordRPC');
-            setBrowsingActivity();
+            setBrowsingActivity('full', user?.avatar?.medium || null, user?.name ? `Logged in as ${user.name}` : null);
         };
 
         updateRPC();
-    }, []);
+    }, [user]);
 
 
 

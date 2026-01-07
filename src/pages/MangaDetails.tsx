@@ -23,6 +23,8 @@ import Loading from '../components/ui/Loading';
 import { SearchIcon, BookOpenIcon, ArrowRightIcon } from '../components/ui/Icons';
 import { motion } from 'framer-motion';
 import { PlayIcon, CheckIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon } from '../components/ui/Icons';
+import { useAuth } from '../hooks/useAuth';
+import { setBrowsingActivity } from '../services/discordRPC';
 
 // Status options for AniList
 const STATUS_OPTIONS = [
@@ -102,6 +104,7 @@ function MangaDetails() {
     const navigate = useNavigate();
     const { getMappingByAnilistId } = useMangaMappings();
     const malAuth = useMalAuth();
+    const { user } = useAuth();
     const [manga, setManga] = useState<Manga | null>(null);
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState(0);
@@ -133,6 +136,11 @@ function MangaDetails() {
         }
         load();
     }, [id]);
+
+    // Discord RPC - Set browsing activity (Viewing Manga)
+    useEffect(() => {
+        setBrowsingActivity('full', user?.avatar?.medium || null, user?.name ? `Logged in as ${user.name}` : null);
+    }, [user]);
 
 
 

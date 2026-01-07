@@ -35,7 +35,8 @@ import {
 } from '../lib/localMangaDb';
 import { sendNotification } from '@tauri-apps/plugin-notification';
 import { syncMangaFromAniList } from '../lib/syncService';
-import { clearDiscordActivity } from '../services/discordRPC';
+import { clearDiscordActivity, setBrowsingActivity } from '../services/discordRPC';
+import { useAuth } from '../hooks/useAuth';
 import { queueChapterDownload, queueMultipleChapters, onDownloadProgress, isDownloadFolderConfigured } from '../services/downloadService';
 import { Dropdown } from '../components/ui/Dropdown';
 import AniListSearchDialog from '../components/ui/AniListSearchDialog';
@@ -47,6 +48,7 @@ function MangaSourceDetails() {
     const navigate = useNavigate();
     const { getMapping, addMapping, removeMapping } = useMangaMappings();
     const { settings } = useSettings();
+    const { user } = useAuth();
 
     const [manga, setManga] = useState<Manga | null>(null);
     const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -199,11 +201,9 @@ function MangaSourceDetails() {
 
         loadData();
 
-        // Cleanup on unmount
-        return () => {
-            clearDiscordActivity();
-        };
-    }, [source, mangaId]);
+        // Set browsing activity including avatar
+        setBrowsingActivity('full', user?.avatar?.medium || null, user?.name ? `Logged in as ${user.name}` : null);
+    }, [source, mangaId, user]);
 
     const filteredChapters = useMemo(() => {
         // Get the entry ID for bookmark/download checks

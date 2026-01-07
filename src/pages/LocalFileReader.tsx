@@ -7,6 +7,7 @@ import { loadPdf, renderPdfPage } from '../lib/pdfReader';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { useFolderMappings } from '../hooks/useFolderMappings';
 import { useMalAuth } from '../context/MalAuthContext';
+import { useAuthContext } from '../context/AuthContext';
 import * as malClient from '../api/malClient';
 import { updateMangaProgress } from '../lib/localMangaDb';
 import { syncMangaEntryToAniList } from '../lib/syncService';
@@ -24,6 +25,7 @@ function LocalFileReader() {
     const navigate = useNavigate();
     const { getMappingForFilePath } = useFolderMappings();
     const malAuth = useMalAuth();
+    const { user } = useAuthContext();
 
     const [pages, setPages] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
@@ -93,6 +95,8 @@ function LocalFileReader() {
             chapter: chapterNumber,
             anilistId: mapping.anilistId,
             coverImage: mapping.coverImage,
+            smallImage: user?.avatar?.medium || null,
+            smallText: user?.name ? `Logged in as ${user.name}` : null
         });
 
         // Clear activity and manga reading state when leaving the reader
@@ -100,7 +104,7 @@ function LocalFileReader() {
             setMangaReadingState(false);
             clearDiscordActivity();
         };
-    }, [mapping, chapterNumber]);
+    }, [mapping, chapterNumber, user]);
 
     // Load file pages
     useEffect(() => {
