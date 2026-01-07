@@ -13,6 +13,9 @@ import { ExtensionMeta, RepositoryIndex, ExtensionRepo } from './types';
 
 const REPOS_STORAGE_KEY = 'extension-repos';
 
+// Default repository - automatically added on first launch
+const DEFAULT_REPO_URL = 'https://raw.githubusercontent.com/MemestaVedas/PLAY-ON/main/public/extensions';
+
 class ExtensionRepositoryService {
     private repos: ExtensionRepo[] = [];
 
@@ -28,6 +31,17 @@ class ExtensionRepositoryService {
             const saved = localStorage.getItem(REPOS_STORAGE_KEY);
             if (saved) {
                 this.repos = JSON.parse(saved);
+            }
+
+            // Auto-add default repo if no repos exist
+            if (this.repos.length === 0) {
+                console.log('[ExtensionRepository] No repos found, adding default repository');
+                this.repos.push({
+                    url: DEFAULT_REPO_URL,
+                    name: 'PLAY-ON! Official',
+                    addedAt: Date.now()
+                });
+                this.saveRepos();
             }
         } catch (e) {
             console.error('[ExtensionRepository] Failed to load repos:', e);

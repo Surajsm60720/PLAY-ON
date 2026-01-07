@@ -197,7 +197,7 @@ return {
                 const match = href.match(/\/read\/([\w-]+)\/([\w-]+)\/chapter-([\d.]+)/);
                 if (!match) continue;
 
-                const chapterId = `${match[1]}/${match[2]}/chapter-${match[3]}`; // manga-id/lang/chapter-num
+                const chapterId = `${match[1]}::${match[2]}::chapter-${match[3]}`; // manga-id::lang::chapter-num (URL-safe)
                 const number = parseFloat(match[3]);
 
                 // Skip duplicates
@@ -227,8 +227,9 @@ return {
 
     async getPages(chapterId) {
         try {
-            // chapterId format: manga-id/lang/chapter-num
-            const url = `${this.baseUrl}/read/${chapterId}`;
+            // chapterId format: manga-id::lang::chapter-num (URL-safe, decode :: back to /)
+            const decodedChapterId = chapterId.replace(/::/g, '/');
+            const url = `${this.baseUrl}/read/${decodedChapterId}`;
             console.log('[MangaReader] Fetching pages from:', url);
 
             const response = await fetch(url, {
