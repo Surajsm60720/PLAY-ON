@@ -25,6 +25,7 @@ import { fetchAnimeDetails } from '../api/anilistClient';
 import { sendDesktopNotification } from '../services/notification';
 import { useNowPlaying } from '../context/NowPlayingContext';
 import { useFolderMappings } from './useFolderMappings';
+import { useAuthContext } from '../context/AuthContext';
 
 // Poll interval in milliseconds (check every 10 seconds - less aggressive)
 const POLL_INTERVAL = 10000;
@@ -111,6 +112,9 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
 
     // Get folder mappings for fallback detection
     const { getMappingForFilePath } = useFolderMappings();
+
+    // Get user for avatar
+    const { user } = useAuthContext();
 
     // Helper function to track anime session with genres
     const trackAnimeWithGenres = useCallback(async (
@@ -226,6 +230,8 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                             coverImage: manualSession.coverImage || null,
                             totalEpisodes: null,
                             privacyLevel,
+                            smallImage: user?.avatar?.medium || null,
+                            smallText: user?.name ? `Logged in as ${user.name}` : null,
                         });
 
                         // Track stats for new episode
@@ -301,6 +307,8 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                         coverImage: newDetection.coverImage,
                         totalEpisodes: newDetection.totalEpisodes,
                         privacyLevel,
+                        smallImage: user?.avatar?.medium || null,
+                        smallText: user?.name ? `Logged in as ${user.name}` : null,
                     });
 
                     // Track stats for new episode
@@ -349,6 +357,8 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                         coverImage: newDetection.coverImage,
                         totalEpisodes: null,
                         privacyLevel,
+                        smallImage: user?.avatar?.medium || null,
+                        smallText: user?.name ? `Logged in as ${user.name}` : null,
                     });
 
                     // Track stats for new episode
@@ -412,6 +422,8 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                         coverImage: newDetection.coverImage,
                         totalEpisodes: newDetection.totalEpisodes,
                         privacyLevel,
+                        smallImage: user?.avatar?.medium || null,
+                        smallText: user?.name ? `Logged in as ${user.name}` : null,
                     });
 
                     // Track stats for new episode (only when truly different)
@@ -445,7 +457,7 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                     }
 
                     // Reset to default "Browsing App" status
-                    await setBrowsingActivity(privacyLevel);
+                    await setBrowsingActivity(privacyLevel, user?.avatar?.medium || null, user?.name ? `Logged in as ${user.name}` : null);
                 }
                 // If count < debounce, we keep showing whatever status we had (Watching).
                 // If count >= debounce but !isWatching, we are already browsing/idle.
@@ -455,7 +467,7 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
             // On error, increment the counter but don't immediately switch
             notDetectedCountRef.current++;
         }
-    }, [manualSession, getMappingForFilePath, clearManualSession, privacyLevel, trackAnimeWithGenres]);
+    }, [manualSession, getMappingForFilePath, clearManualSession, privacyLevel, trackAnimeWithGenres, user]);
 
     useEffect(() => {
         if (!enabled) {
@@ -473,7 +485,7 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
             if (success) {
                 isInitializedRef.current = true;
                 // Set initial browsing activity
-                setBrowsingActivity(privacyLevel);
+                setBrowsingActivity(privacyLevel, user?.avatar?.medium || null, user?.name ? `Logged in as ${user.name}` : null);
 
                 // Do an initial check after a short delay
                 setTimeout(checkAndUpdateActivity, 2000);
@@ -492,12 +504,12 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
             }
             stopDiscordRPC();
         };
-    }, [enabled, privacyLevel, checkAndUpdateActivity]);
+    }, [enabled, privacyLevel, checkAndUpdateActivity, user]);
 
     // Expose manual controls
     return {
         refresh: checkAndUpdateActivity,
         clear: clearDiscordActivity,
-        setBrowsing: () => setBrowsingActivity(privacyLevel),
+        setBrowsing: () => setBrowsingActivity(privacyLevel, user?.avatar?.medium || null, user?.name ? `Logged in as ${user.name}` : null),
     };
 }

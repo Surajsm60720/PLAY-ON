@@ -37,6 +37,7 @@ let isInitialized = false;
 let isConnecting = false;
 let currentAnimeId: number | null = null;
 let watchStartTime: number | null = null;
+let browsingStartTime: number | null = null;
 let retryTimeout: ReturnType<typeof setTimeout> | null = null;
 
 // Manga reading state - when true, anime detection should not override activity
@@ -127,8 +128,10 @@ export async function updateAnimeActivity(params: {
     coverImage?: string | null;
     totalEpisodes?: number | null;
     privacyLevel?: 'full' | 'minimal' | 'hidden';
+    smallImage?: string | null;
+    smallText?: string | null;
 }): Promise<void> {
-    const { animeName, episode, season, anilistId, coverImage, totalEpisodes, privacyLevel = 'full' } = params;
+    const { animeName, episode, season, anilistId, coverImage, totalEpisodes, privacyLevel = 'full', smallImage, smallText } = params;
 
     // hidden: Do not update activity (effectively invisible)
     if (privacyLevel === 'hidden') {
@@ -153,6 +156,7 @@ export async function updateAnimeActivity(params: {
     if (!isSameAnime) {
         currentAnimeId = anilistId;
         watchStartTime = Date.now();
+        browsingStartTime = null; // Reset browsing time when watching anime
     }
 
     try {
@@ -206,8 +210,13 @@ export async function updateAnimeActivity(params: {
             }
 
             // Use app icon as small image (must be uploaded to Discord Developer Portal)
-            assets.setSmallImage(APP_ICON_ASSET);
-            assets.setSmallText('PLAY-ON!');
+            if (smallImage) {
+                assets.setSmallImage(smallImage);
+                if (smallText) assets.setSmallText(smallText);
+            } else {
+                assets.setSmallImage(APP_ICON_ASSET);
+                assets.setSmallText('PLAY-ON!');
+            }
 
             activity = activity.setAssets(assets);
 
@@ -237,7 +246,11 @@ export async function updateAnimeActivity(params: {
  * This is a lower priority status. It will be ignored if the user is
  * currently Watching (anime) or Reading (manga).
  */
-export async function setBrowsingActivity(privacyLevel: 'full' | 'minimal' | 'hidden' = 'full'): Promise<void> {
+export async function setBrowsingActivity(
+    privacyLevel: 'full' | 'minimal' | 'hidden' = 'full',
+    smallImage?: string | null,
+    smallText?: string | null
+): Promise<void> {
     if (privacyLevel === 'hidden') return;
 
     // PRIORITY CHECK: If we are actively watching or reading, DO NOT switch to browsing.
@@ -256,12 +269,23 @@ export async function setBrowsingActivity(privacyLevel: 'full' | 'minimal' | 'hi
             .setDetails('Browsing App for Anime and Manga')
             .setState('Exploring Library');
 
-        const timestamps = new Timestamps(Date.now());
+        if (!browsingStartTime) {
+            browsingStartTime = Date.now();
+        }
+
+        const timestamps = new Timestamps(browsingStartTime);
         activity = activity.setTimestamps(timestamps);
 
         const assets = new Assets()
             .setLargeImage(APP_ICON_ASSET)
             .setLargeText('PLAY-ON!');
+
+        if (smallImage) {
+            assets.setSmallImage(smallImage);
+            if (smallText) {
+                assets.setSmallText(smallText);
+            }
+        }
 
         activity = activity.setAssets(assets);
 
@@ -309,8 +333,10 @@ export async function updateMangaActivity(params: {
     coverImage?: string | null;
     totalChapters?: number | null;
     privacyLevel?: 'full' | 'minimal' | 'hidden';
+    smallImage?: string | null;
+    smallText?: string | null;
 }): Promise<void> {
-    const { mangaTitle, chapter, anilistId, coverImage, totalChapters, privacyLevel = 'full' } = params;
+    const { mangaTitle, chapter, anilistId, coverImage, totalChapters, privacyLevel = 'full', smallImage, smallText } = params;
 
     if (privacyLevel === 'hidden') return;
 
@@ -328,6 +354,9 @@ export async function updateMangaActivity(params: {
     } else if (!anilistId && !currentAnimeId) {
         watchStartTime = Date.now();
     }
+
+    // Reset browsing time when reading manga
+    browsingStartTime = null;
 
     try {
         let activity = new Activity();
@@ -360,8 +389,13 @@ export async function updateMangaActivity(params: {
                 assets.setLargeImage(APP_ICON_ASSET);
                 assets.setLargeText(mangaTitle);
             }
-            assets.setSmallImage(APP_ICON_ASSET);
-            assets.setSmallText('PLAY-ON!');
+            if (smallImage) {
+                assets.setSmallImage(smallImage);
+                if (smallText) assets.setSmallText(smallText);
+            } else {
+                assets.setSmallImage(APP_ICON_ASSET);
+                assets.setSmallText('PLAY-ON!');
+            }
             activity = activity.setAssets(assets);
 
             if (anilistId) {

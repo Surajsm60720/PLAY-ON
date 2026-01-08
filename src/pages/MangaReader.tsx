@@ -18,6 +18,7 @@ import { Dropdown } from '../components/ui/Dropdown';
 import { ExtensionManager, Page, Chapter, Manga } from '../services/ExtensionManager';
 import { useMangaMappings } from '../hooks/useMangaMappings';
 import { useMalAuth } from '../context/MalAuthContext';
+import { useAuthContext } from '../context/AuthContext';
 import * as malClient from '../api/malClient';
 import { updateMangaProgress, getMangaEntryByAnilistId, getLocalMangaEntry, getLocalMangaDb, isChapterDownloaded, LocalMangaEntry } from '../lib/localMangaDb';
 import { syncMangaEntryToAniList } from '../lib/syncService';
@@ -110,6 +111,7 @@ function MangaReader() {
     const navigate = useNavigate();
     const { getMapping } = useMangaMappings();
     const malAuth = useMalAuth();
+    const { user } = useAuthContext();
 
     // Get manga info from URL params for chapter navigation
     const mangaId = searchParams.get('mangaId');
@@ -319,7 +321,9 @@ function MangaReader() {
             chapter: currentChapter.number,
             anilistId: anilistMapping?.anilistId,
             coverImage: manga?.coverUrl || anilistMapping?.coverImage,
-            totalChapters: anilistMapping?.totalChapters
+            totalChapters: anilistMapping?.totalChapters,
+            smallImage: user?.avatar?.medium || null,
+            smallText: user?.name ? `Logged in as ${user.name}` : null
         });
 
         // Cleanup on unmount
@@ -327,7 +331,7 @@ function MangaReader() {
             setMangaReadingState(false);
             clearDiscordActivity();
         };
-    }, [currentChapter, manga, mangaTitle, anilistMapping]);
+    }, [currentChapter, manga, mangaTitle, anilistMapping, user]);
 
     // Scroll tracking for vertical mode
     useEffect(() => {
