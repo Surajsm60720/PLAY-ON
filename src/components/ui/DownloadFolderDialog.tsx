@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../../context/SettingsContext';
+import { resourceDir } from '@tauri-apps/api/path';
 
 interface DownloadFolderDialogProps {
     isOpen: boolean;
@@ -11,16 +12,51 @@ interface DownloadFolderDialogProps {
 
 /**
  * Dialog prompting user to configure a download folder before downloading manga.
- * Shown when user attempts to download without having configured a folder.
+ * Shows default path and allows user to use it or choose a custom folder.
+ * On first download, shows this dialog with the option to use default.
  */
 export function DownloadFolderDialog({ isOpen, onClose, onConfigured }: DownloadFolderDialogProps) {
     const navigate = useNavigate();
-    const { updateSetting } = useSettings();
+    const { updateSetting, updateSettings } = useSettings();
     const [selecting, setSelecting] = useState(false);
+    const [defaultPath, setDefaultPath] = useState<string>('');
+    const [loading, setLoading] = useState(true);
+
+    // Get the default download path (app resource directory + Downloads)
+    useEffect(() => {
+        const getDefaultPath = async () => {
+            try {
+                const resDir = await resourceDir();
+                // Use a Downloads subfolder within the resource directory
+                const downloadsPath = `${resDir}Downloads`;
+                setDefaultPath(downloadsPath);
+            } catch (e) {
+                console.error('Failed to get resource dir:', e);
+                setDefaultPath('');
+            } finally {
+                setLoading(false);
+            }
+        };
+        if (isOpen) {
+            getDefaultPath();
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
-    const handleConfigureNow = async () => {
+    const handleUseDefault = async () => {
+        if (!defaultPath) return;
+
+        // Update both the path and mark prompt as shown
+        updateSettings({
+            mangaDownloadPath: defaultPath,
+            downloadFolderPromptShown: true
+        });
+        onConfigured?.();
+        onClose();
+    };
+
+    const handleChooseFolder = async () => {
         setSelecting(true);
         try {
             const selected = await open({
@@ -30,7 +66,10 @@ export function DownloadFolderDialog({ isOpen, onClose, onConfigured }: Download
             });
 
             if (selected && typeof selected === 'string') {
-                updateSetting('mangaDownloadPath', selected);
+                updateSettings({
+                    mangaDownloadPath: selected,
+                    downloadFolderPromptShown: true
+                });
                 onConfigured?.();
                 onClose();
             }
@@ -42,6 +81,8 @@ export function DownloadFolderDialog({ isOpen, onClose, onConfigured }: Download
     };
 
     const handleGoToSettings = () => {
+        // Mark prompt as shown even if they go to settings
+        updateSetting('downloadFolderPromptShown', true);
         onClose();
         navigate('/settings');
     };
@@ -52,7 +93,7 @@ export function DownloadFolderDialog({ isOpen, onClose, onConfigured }: Download
             onClick={onClose}
         >
             <div
-                className="bg-[#15151e] p-8 rounded-2xl border border-white/10 w-full max-w-[420px] shadow-2xl"
+                className="bg-[#15151e] p-8 rounded-2xl border border-white/10 w-full max-w-[480px] shadow-2xl"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Icon */}
@@ -72,17 +113,38 @@ export function DownloadFolderDialog({ isOpen, onClose, onConfigured }: Download
                         Configure Download Folder
                     </h3>
                     <p className="text-sm text-white/60 leading-relaxed">
-                        To download manga chapters, please configure a download folder first.
-                        Your manga will be saved as CBZ files in this location.
+                        Choose where to save your downloaded manga chapters.
+                        They will be stored as CBZ files that you can read offline.
                     </p>
                 </div>
 
+                {/* Default Path Preview */}
+                {defaultPath && !loading && (
+                    <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
+                        <div className="text-xs text-white/40 mb-1 uppercase tracking-wider">Default Location</div>
+                        <div className="text-sm text-white/80 font-mono break-all">{defaultPath}</div>
+                    </div>
+                )}
+
                 {/* Buttons */}
                 <div className="flex flex-col gap-3">
+                    {/* Use Default Button - Primary if we have a default path */}
+                    {defaultPath && !loading && (
+                        <button
+                            onClick={handleUseDefault}
+                            className="w-full py-3 px-4 rounded-xl font-semibold text-black bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Use Default Location
+                        </button>
+                    )}
+
                     <button
-                        onClick={handleConfigureNow}
+                        onClick={handleChooseFolder}
                         disabled={selecting}
-                        className="w-full py-3 px-4 rounded-xl font-semibold text-black bg-white hover:bg-gray-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {selecting ? (
                             <>
@@ -97,27 +159,16 @@ export function DownloadFolderDialog({ isOpen, onClose, onConfigured }: Download
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                                 </svg>
-                                Choose Folder
+                                Choose Different Folder
                             </>
                         )}
                     </button>
 
                     <button
                         onClick={handleGoToSettings}
-                        className="w-full py-3 px-4 rounded-xl font-medium text-white/80 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-2 text-sm text-white/50 hover:text-white/70 transition-colors"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                        </svg>
-                        Go to Settings
-                    </button>
-
-                    <button
-                        onClick={onClose}
-                        className="w-full py-2 text-sm text-white/40 hover:text-white/60 transition-colors"
-                    >
-                        Cancel
+                        Configure Later in Settings
                     </button>
                 </div>
             </div>
@@ -126,3 +177,4 @@ export function DownloadFolderDialog({ isOpen, onClose, onConfigured }: Download
 }
 
 export default DownloadFolderDialog;
+

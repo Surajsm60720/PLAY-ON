@@ -1,0 +1,186 @@
+/**
+ * Default Dark Theme - "Zenless Lavender"
+ * 
+ * The signature PLAY-ON! dark theme with soft lavender accents,
+ * glassmorphic effects, and a peaceful aesthetic.
+ * 
+ * This is the base theme that all other themes should match structurally.
+ */
+
+:root,
+:root[data-theme="default-dark"] {
+  /* =========================================================================
+     CORE BACKGROUNDS
+     ========================================================================= */
+  --theme-bg-main: #0c0c0e;
+  --theme-bg-content: rgba(20, 20, 25, 0.65);
+  --theme-bg-card: #1a1a20;
+  --theme-bg-glass: rgba(18, 18, 20, 0.65);
+  --theme-bg-glass-hover: rgba(255, 255, 255, 0.08);
+  --theme-bg-overlay: rgba(0, 0, 0, 0.6);
+  
+  /* Zen palette backgrounds */
+  --theme-zen-black: #09090b;
+  --theme-zen-gray: #27272a;
+  --theme-zen-surface-low: #18181b;
+  --theme-zen-surface-high: #27272a;
+  
+  /* =========================================================================
+     TEXT COLORS
+     ========================================================================= */
+  --theme-text-main: #ededed;
+  --theme-text-muted: #cdcdcd;
+  --theme-text-highlight: #6a6a9e;
+  --theme-text-inverse: #000000;
+  
+  /* =========================================================================
+     ACCENT PALETTE - "Peaceful Pastels"
+     ========================================================================= */
+  
+  /* Primary: Lavender Mist */
+  --theme-accent-primary: #B4A2F6;
+  --theme-accent-primary-rgb: 180, 162, 246;
+  --theme-accent-primary-hover: #C7B8FF;
+  --theme-accent-primary-muted: rgba(180, 162, 246, 0.15);
+  
+  /* Secondary: Sky Blue */
+  --theme-accent-secondary: #A5DBF8;
+  --theme-accent-secondary-rgb: 165, 219, 248;
+  --theme-accent-secondary-hover: #B8E5FF;
+  --theme-accent-secondary-muted: rgba(165, 219, 248, 0.15);
+  
+  /* Tertiary: Soft Peach */
+  --theme-accent-tertiary: #FFBE98;
+  --theme-accent-tertiary-rgb: 255, 190, 152;
+  --theme-accent-tertiary-muted: rgba(255, 190, 152, 0.15);
+  
+  /* Success: Mint Tonic */
+  --theme-accent-success: #9DF0B3;
+  --theme-accent-success-rgb: 157, 240, 179;
+  --theme-accent-success-muted: rgba(157, 240, 179, 0.15);
+  
+  /* Warning: Star Glow */
+  --theme-accent-warning: #FFF4BD;
+  --theme-accent-warning-rgb: 255, 244, 189;
+  --theme-accent-warning-muted: rgba(255, 244, 189, 0.15);
+  
+  /* Danger */
+  --theme-accent-danger: #FCA5A5;
+  --theme-accent-danger-rgb: 252, 165, 165;
+  --theme-accent-danger-muted: rgba(252, 165, 165, 0.15);
+  --theme-accent-danger-strong: #ff6b6b;
+  
+  /* Info */
+  --theme-accent-info: #93C5FD;
+  --theme-accent-info-rgb: 147, 197, 253;
+  --theme-accent-info-muted: rgba(147, 197, 253, 0.15);
+
+  /* =========================================================================
+     EXTENDED PASTEL PALETTE (for cards, tags, etc.)
+     ========================================================================= */
+  --theme-pastel-purple: #C7B8EA;
+  --theme-pastel-pink: #FFB5C5;
+  --theme-pastel-green: #A8E6CF;
+  --theme-pastel-peach: #FFE5B4;
+  --theme-pastel-blue: #B5E7FF;
+  --theme-pastel-lavender: #E0BBE4;
+  --theme-pastel-mint: #B8E6D5;
+  --theme-pastel-yellow: #FFF9B0;
+  
+  /* =========================================================================
+     BORDERS
+     ========================================================================= */
+  --theme-border-subtle: rgba(255, 255, 255, 0.08);
+  --theme-border-highlight: rgba(255, 255, 255, 0.15);
+  --theme-border-accent: rgba(180, 162, 246, 0.3);
+  --theme-border-accent-strong: rgba(180, 162, 246, 0.5);
+  
+  /* =========================================================================
+     SHADOWS
+     ========================================================================= */
+  --theme-shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --theme-shadow-glow: 0 0 20px rgba(180, 162, 246, 0.2);
+  --theme-shadow-glow-strong: 0 0 30px rgba(180, 162, 246, 0.4);
+  --theme-shadow-elevated: 0 10px 40px rgba(0, 0, 0, 0.5);
+  --theme-shadow-dropdown: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --theme-shadow-card: 0 4px 15px rgba(0, 0, 0, 0.2);
+  --theme-shadow-button: 0 4px 15px rgba(180, 162, 246, 0.3);
+  
+  /* =========================================================================
+     GRADIENTS
+     ========================================================================= */
+  --theme-gradient-primary: linear-gradient(135deg, #B4A2F6, #A5DBF8);
+  --theme-gradient-secondary: linear-gradient(135deg, #A5DBF8, #9DF0B3);
+  --theme-gradient-accent: linear-gradient(135deg, #B4A2F6 0%, #9FA5FE 100%);
+  --theme-gradient-overlay: linear-gradient(to top,
+    rgba(10, 10, 15, 0.95) 0%,
+    rgba(14, 14, 20, 0.8) 30%,
+    rgba(180, 162, 246, 0.1) 100%);
+  --theme-gradient-bg-mesh: 
+    radial-gradient(circle at 15% 50%, rgba(180, 162, 246, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(165, 219, 248, 0.08), transparent 25%);
+  --theme-gradient-fade-down: linear-gradient(to bottom, transparent, var(--theme-bg-main));
+  
+  /* =========================================================================
+     INTERACTIVE STATES
+     ========================================================================= */
+  --theme-hover-bg: rgba(255, 255, 255, 0.05);
+  --theme-active-bg: rgba(255, 255, 255, 0.1);
+  --theme-focus-ring: 0 0 0 3px rgba(180, 162, 246, 0.3);
+  
+  /* =========================================================================
+     SCROLLBAR
+     ========================================================================= */
+  --theme-scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --theme-scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+  --theme-scrollbar-track: transparent;
+  
+  /* =========================================================================
+     COMPONENT-SPECIFIC TOKENS
+     These are semantic tokens for specific UI patterns
+     ========================================================================= */
+  
+  /* Cards */
+  --theme-card-bg: var(--theme-bg-glass);
+  --theme-card-border: var(--theme-border-subtle);
+  --theme-card-hover-border: var(--theme-border-accent);
+  
+  /* Inputs */
+  --theme-input-bg: var(--theme-bg-glass-hover);
+  --theme-input-border: var(--theme-border-subtle);
+  --theme-input-focus-border: var(--theme-accent-primary);
+  --theme-input-placeholder: var(--theme-text-muted);
+  
+  /* Buttons */
+  --theme-btn-primary-bg: var(--theme-gradient-primary);
+  --theme-btn-primary-text: #1a1a1e;
+  --theme-btn-secondary-bg: var(--theme-bg-glass);
+  --theme-btn-secondary-text: var(--theme-text-main);
+  --theme-btn-secondary-border: var(--theme-border-subtle);
+  
+  /* Badges / Pills */
+  --theme-badge-bg: rgba(0, 0, 0, 0.6);
+  --theme-badge-border: rgba(255, 255, 255, 0.15);
+  
+  /* Progress / Status */
+  --theme-progress-bg: var(--theme-border-subtle);
+  --theme-progress-fill: var(--theme-gradient-primary);
+  
+  /* Status indicators */
+  --theme-status-online: #9DF0B3;
+  --theme-status-offline: #ff6b6b;
+  --theme-status-away: #FFF4BD;
+  
+  /* Toggle switch */
+  --theme-toggle-off-bg: var(--theme-border-subtle);
+  --theme-toggle-on-bg: var(--theme-gradient-primary);
+  --theme-toggle-knob: #ffffff;
+  
+  /* Tooltip */
+  --theme-tooltip-bg: rgba(0, 0, 0, 0.9);
+  --theme-tooltip-text: var(--theme-text-main);
+  
+  /* Selection */
+  --theme-selection-bg: rgba(180, 162, 246, 0.3);
+  --theme-selection-text: var(--theme-text-main);
+}

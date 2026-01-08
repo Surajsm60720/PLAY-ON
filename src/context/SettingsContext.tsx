@@ -14,6 +14,7 @@ export type ShortcutAction =
     | 'goMangaList'
     | 'goSettings'
     | 'goProfile'
+    | 'goBack'
     | 'escape';
 
 export interface Settings {
@@ -37,6 +38,7 @@ export interface Settings {
     scanDepth: number;
     ignoredTerms: string[];
     mangaDownloadPath: string;
+    downloadFolderPromptShown: boolean;
 
     // Manga Reading
     defaultChapterSort: 'asc' | 'desc';
@@ -56,6 +58,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: Record<ShortcutAction, string> = {
     goMangaList: 'Ctrl+Shift+M',
     goSettings: 'Ctrl+,',
     goProfile: 'Ctrl+P',
+    goBack: 'Ctrl+Backspace',
     escape: 'Escape',
 };
 
@@ -80,6 +83,7 @@ const DEFAULT_SETTINGS: Settings = {
     scanDepth: 3,
     ignoredTerms: ['SAMPLE', 'Creditless', 'NCOP', 'NCED', 'Preview'],
     mangaDownloadPath: '',
+    downloadFolderPromptShown: false,
 
     // Manga Reading
     defaultChapterSort: 'desc',

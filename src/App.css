@@ -1,56 +1,73 @@
+/**
+ * PLAY-ON! Application Styles
+ * 
+ * This file sets up the base styles and imports the theme system.
+ * All colors and visual properties come from the active theme.
+ */
+
+/* === FONTS === */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&family=Varela+Round&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
-@import "tailwindcss";
 @import url('https://fonts.cdnfonts.com/css/planet-kosmos');
 
+/* === THEME IMPORTS === */
+/* The theme files define all --theme-* CSS custom properties */
+@import "./themes/default-dark.theme.css";
+@import "./themes/light.theme.css";
 
+/* === TAILWIND === */
+@import "tailwindcss";
 
+/* === TAILWIND THEME EXTENSIONS === */
 @theme {
-  /* App Shell Colors */
+  /* App Shell Colors - mapped to theme variables */
   --color-shell: transparent;
-  --color-content: var(--color-bg-content);
-  /* Cohesive Glass Panel */
+  --color-content: var(--theme-bg-content);
   --color-tab: transparent;
   --color-curve: transparent;
-  --color-text-secondary: var(--color-text-muted);
-  --color-text-hover: var(--color-text-highlight);
+  --color-text-secondary: var(--theme-text-muted);
+  --color-text-hover: var(--theme-text-highlight);
 
-  /* Zenless / Tech Palette (Softened) */
-  --color-zen-black: #09090b;
-  --color-zen-gray: #27272a;
-  --color-zen-surfacelow: #18181b;
-  --color-zen-surfacehigh: #27272a;
-  --color-zen-accent: #B4A2F6;
-  /* Lavender mist anchors it */
+  /* Zen palette - mapped to theme */
+  --color-zen-black: var(--theme-zen-black);
+  --color-zen-gray: var(--theme-zen-gray);
+  --color-zen-surfacelow: var(--theme-zen-surface-low);
+  --color-zen-surfacehigh: var(--theme-zen-surface-high);
+  --color-zen-accent: var(--theme-accent-primary);
 
+  /* Font families */
   --font-mono: "Space Mono", monospace;
   --font-rounded: "Varela Round", sans-serif;
 
-  /* Custom Palette (Peaceful) */
-  --color-lavender-mist: #B4A2F6;
-  --color-soft-peach: #FFBE98;
-  --color-mint-tonic: #9DF0B3;
-  --color-sky-blue: #A5DBF8;
-  --color-star-glow: #FFF4BD;
+  /* Legacy color aliases - map to theme */
+  --color-lavender-mist: var(--theme-accent-primary);
+  --color-soft-peach: var(--theme-accent-tertiary);
+  --color-mint-tonic: var(--theme-accent-success);
+  --color-sky-blue: var(--theme-accent-secondary);
+  --color-star-glow: var(--theme-accent-warning);
 }
 
+/* === ROOT VARIABLES === */
+/* These map legacy variable names to the new theme system */
 :root {
-  /* Default Dark Mode Variables */
-  --color-bg-main: #0c0c0e;
-  --color-bg-content: rgba(20, 20, 25, 0.65);
-  --color-bg-card: #1a1a20;
-  --color-bg-glass: rgba(18, 18, 20, 0.65);
-  --color-bg-glass-hover: rgba(255, 255, 255, 0.08);
+  /* Background colors */
+  --color-bg-main: var(--theme-bg-main);
+  --color-bg-content: var(--theme-bg-content);
+  --color-bg-card: var(--theme-bg-card);
+  --color-bg-glass: var(--theme-bg-glass);
+  --color-bg-glass-hover: var(--theme-bg-glass-hover);
 
-  --color-text-main: #ededed;
-  --color-text-muted: #cdcdcd;
-  /* #4b4b6e is too dark for dark mode text sometimes, adjusting for contrast */
-  --color-text-highlight: #6a6a9e;
+  /* Text colors */
+  --color-text-main: var(--theme-text-main);
+  --color-text-muted: var(--theme-text-muted);
+  --color-text-highlight: var(--theme-text-highlight);
 
-  --color-border-subtle: rgba(255, 255, 255, 0.08);
-  --color-border-highlight: rgba(255, 255, 255, 0.15);
+  /* Border colors */
+  --color-border-subtle: var(--theme-border-subtle);
+  --color-border-highlight: var(--theme-border-highlight);
 
-  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.2);
+  /* Shadows */
+  --shadow-glass: var(--theme-shadow-glass);
 
   /* Font Settings */
   font-family: "Varela Round", sans-serif;
@@ -58,8 +75,8 @@
   line-height: 24px;
   font-weight: 400;
 
-  color: var(--color-text-main);
-  background-color: var(--color-bg-main);
+  color: var(--theme-text-main);
+  background-color: var(--theme-bg-main);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -68,47 +85,39 @@
   -webkit-text-size-adjust: 100%;
 }
 
-
-
-/* Peaceful Mesh Gradient Background */
+/* === BODY STYLES === */
 body {
-  background-color: var(--color-bg-main);
-  background-image:
-    radial-gradient(circle at 15% 50%, rgba(180, 162, 246, 0.08), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(165, 219, 248, 0.08), transparent 25%);
+  background-color: var(--theme-bg-main);
+  background-image: var(--theme-gradient-bg-mesh);
   background-attachment: fixed;
   min-height: 100vh;
-  color: var(--color-text-main);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  color: var(--theme-text-main);
+  transition: background-color 0.3s ease, color 0.3s ease, background-image 0.3s ease;
 }
 
-/* Tech-Glass Utilities (Softened) */
+/* === GLASS UTILITIES === */
 .glass-panel {
-  background: var(--color-bg-glass);
+  background: var(--theme-bg-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--color-border-subtle);
-  box-shadow: var(--shadow-glass);
+  border: 1px solid var(--theme-border-subtle);
+  box-shadow: var(--theme-shadow-glass);
   border-radius: 24px;
-  /* Much rounder */
   transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .glass-panel-hover:hover {
-  background: var(--color-bg-glass-hover);
-  border-color: var(--color-border-highlight);
+  background: var(--theme-bg-glass-hover);
+  border-color: var(--theme-border-highlight);
 }
 
-/* Grainy Glass Effect */
 .glass-grainy {
   position: relative;
-  background: var(--color-bg-content);
+  background: var(--theme-bg-content);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--color-border-subtle);
-  /* More subtle border */
+  border: 1px solid var(--theme-border-subtle);
   overflow: hidden;
-  /* Ensure noise doesn't spill */
   transition: background 0.3s ease;
 }
 
@@ -128,8 +137,7 @@ body {
   z-index: 1;
 }
 
-/* Typography Overrides */
-/* Typography Overrides */
+/* === TYPOGRAPHY === */
 .font-tech {
   font-family: "Space Mono", monospace;
   letter-spacing: -0.02em;
@@ -137,29 +145,28 @@ body {
 
 .font-planet {
   font-family: 'Planet Kosmos', sans-serif;
-  font-weight: 400; /* Planet Kosmos usually has one weight */
+  font-weight: 400;
 }
 
-/* Scrollbars */
+/* === SCROLLBARS === */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--theme-scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--theme-scrollbar-thumb);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--theme-scrollbar-thumb-hover);
 }
 
-/* Utility to hide standard scrollbar but allow scrolling */
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -167,4 +174,135 @@ body {
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* === THEME UTILITY CLASSES === */
+/* Backgrounds */
+.bg-theme-main {
+  background: var(--theme-bg-main);
+}
+
+.bg-theme-content {
+  background: var(--theme-bg-content);
+}
+
+.bg-theme-card {
+  background: var(--theme-bg-card);
+}
+
+.bg-theme-glass {
+  background: var(--theme-bg-glass);
+}
+
+.bg-theme-glass-hover {
+  background: var(--theme-bg-glass-hover);
+}
+
+/* Text colors */
+.text-theme-main {
+  color: var(--theme-text-main);
+}
+
+.text-theme-muted {
+  color: var(--theme-text-muted);
+}
+
+.text-theme-highlight {
+  color: var(--theme-text-highlight);
+}
+
+/* Accent colors */
+.text-accent-primary {
+  color: var(--theme-accent-primary);
+}
+
+.text-accent-secondary {
+  color: var(--theme-accent-secondary);
+}
+
+.text-accent-success {
+  color: var(--theme-accent-success);
+}
+
+.text-accent-warning {
+  color: var(--theme-accent-warning);
+}
+
+.text-accent-danger {
+  color: var(--theme-accent-danger);
+}
+
+.bg-accent-primary {
+  background: var(--theme-accent-primary);
+}
+
+.bg-accent-primary-muted {
+  background: var(--theme-accent-primary-muted);
+}
+
+.bg-accent-secondary {
+  background: var(--theme-accent-secondary);
+}
+
+.bg-accent-success {
+  background: var(--theme-accent-success);
+}
+
+.bg-accent-success-muted {
+  background: var(--theme-accent-success-muted);
+}
+
+.bg-accent-danger {
+  background: var(--theme-accent-danger);
+}
+
+.bg-accent-danger-muted {
+  background: var(--theme-accent-danger-muted);
+}
+
+/* Borders */
+.border-theme-subtle {
+  border-color: var(--theme-border-subtle);
+}
+
+.border-theme-highlight {
+  border-color: var(--theme-border-highlight);
+}
+
+.border-theme-accent {
+  border-color: var(--theme-border-accent);
+}
+
+/* Gradients */
+.bg-gradient-primary {
+  background: var(--theme-gradient-primary);
+}
+
+.bg-gradient-secondary {
+  background: var(--theme-gradient-secondary);
+}
+
+/* Shadows */
+.shadow-theme-glass {
+  box-shadow: var(--theme-shadow-glass);
+}
+
+.shadow-theme-glow {
+  box-shadow: var(--theme-shadow-glow);
+}
+
+.shadow-theme-elevated {
+  box-shadow: var(--theme-shadow-elevated);
+}
+
+/* Focus states */
+.focus-ring:focus {
+  box-shadow: var(--theme-focus-ring);
+  outline: none;
+}
+
+/* Selection */
+::selection {
+  background: var(--theme-selection-bg);
+  color: var(--theme-selection-text);
 }

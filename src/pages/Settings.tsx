@@ -1,6 +1,7 @@
 import { useState, useCallback, KeyboardEvent, useEffect } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useSettings } from '../context/SettingsContext';
+import { useTheme } from '../context/ThemeContext';
 import { useAuthContext } from '../context/AuthContext';
 import { useLocalMedia } from '../context/LocalMediaContext';
 import {
@@ -16,7 +17,9 @@ import {
     BookIcon,
     FolderIcon,
     WrenchIcon,
-    PuzzleIcon
+    PuzzleIcon,
+    SunIcon,
+    MoonIcon
 } from '../components/ui/Icons';
 import { DEFAULT_KEYBOARD_SHORTCUTS, ShortcutAction } from '../context/SettingsContext';
 import { formatShortcutFromEvent } from '../hooks/useKeyboardShortcuts';
@@ -154,6 +157,7 @@ function TagsInput({ tags, onChange, placeholder = 'Add term...' }: TagsInputPro
 
 function GeneralSettings() {
     const { settings, updateSetting } = useSettings();
+    const { theme, setTheme, availableThemes } = useTheme();
 
     return (
         <div className="settings-section">
@@ -161,6 +165,28 @@ function GeneralSettings() {
             <p className="settings-section-description">
                 Customize your app experience
             </p>
+
+            {/* Appearance Section */}
+            <div className="setting-group">
+                <h3 className="setting-group-title">Appearance</h3>
+
+                <SettingRow label="Theme" description="Choose your preferred color scheme">
+                    <div className="theme-switcher">
+                        {availableThemes.map((t) => (
+                            <button
+                                key={t.id}
+                                className={`theme-option ${theme === t.id ? 'active' : ''}`}
+                                onClick={() => setTheme(t.id)}
+                            >
+                                <span className="theme-icon">
+                                    {t.id.includes('dark') || t.id === 'default-dark' ? <MoonIcon size={16} /> : <SunIcon size={16} />}
+                                </span>
+                                {t.name}
+                            </button>
+                        ))}
+                    </div>
+                </SettingRow>
+            </div>
 
             <div className="setting-group">
                 <h3 className="setting-group-title">Navigation</h3>
@@ -190,7 +216,7 @@ function GeneralSettings() {
             </div>
 
             {/* Keyboard Shortcuts Section */}
-            <div style={{ margin: '32px 0 16px', borderTop: '1px solid var(--color-border-subtle)' }} />
+            <div style={{ margin: '32px 0 16px', borderTop: '1px solid var(--theme-border-subtle)' }} />
             <KeyboardSettings />
         </div>
     );
@@ -548,6 +574,7 @@ const SHORTCUT_LABELS: Record<ShortcutAction, { label: string; description: stri
     goMangaList: { label: 'Go to Manga List', description: 'Navigate to Manga List' },
     goSettings: { label: 'Go to Settings', description: 'Navigate to Settings' },
     goProfile: { label: 'Go to Profile', description: 'Navigate to Profile' },
+    goBack: { label: 'Go Back', description: 'Navigate to previous page' },
     escape: { label: 'Escape / Close', description: 'Close dropdowns and dialogs' },
 };
 

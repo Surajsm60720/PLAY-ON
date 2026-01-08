@@ -14,8 +14,7 @@
     z-index: 10;
     box-shadow:
         0 15px 35px rgba(0, 0, 0, 0.5),
-        0 0 20px rgba(180, 162, 246, 0.2);
-    /* Lavender glow */
+        var(--theme-shadow-glow);
 }
 
 /* --- Image Wrapper --- */
@@ -49,7 +48,7 @@
 }
 
 .anime-card:hover .anime-card__image-wrapper::after {
-    box-shadow: inset 0 0 0 2px rgba(180, 162, 246, 0.5);
+    box-shadow: inset 0 0 0 2px var(--theme-border-accent-strong);
 }
 
 /* --- Image --- */
@@ -71,34 +70,33 @@
     top: 10px;
     right: 10px;
     z-index: 25;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--theme-bg-overlay);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     padding: 6px 12px;
     font-size: 0.75rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--theme-text-main);
     font-family: var(--font-mono);
     letter-spacing: 0.05em;
     display: flex;
     align-items: center;
     gap: 4px;
     border-radius: 100px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--theme-border-highlight);
+    box-shadow: var(--theme-shadow-card);
     transition: all 0.3s ease;
 }
 
 .anime-card:hover .anime-card__progress-badge {
     background: rgba(0, 0, 0, 0.85);
-    border-color: rgba(180, 162, 246, 0.8);
-    box-shadow: 0 0 15px rgba(180, 162, 246, 0.3);
-    text-shadow: 0 0 10px rgba(180, 162, 246, 0.5);
+    border-color: var(--theme-accent-primary);
+    box-shadow: var(--theme-shadow-glow);
+    text-shadow: 0 0 10px rgba(var(--theme-accent-primary-rgb), 0.5);
 }
 
 .anime-card__progress-current {
-    color: #B4A2F6;
-    /* Lavender Mist */
+    color: var(--theme-accent-primary);
 }
 
 .anime-card__progress-separator {
@@ -114,11 +112,7 @@
 .anime-card__overlay {
     position: absolute;
     inset: 0;
-    /* Gradient from transparent to dark, slightly purple/blue tinted */
-    background: linear-gradient(to top,
-            rgba(10, 10, 15, 0.95) 0%,
-            rgba(14, 14, 20, 0.8) 30%,
-            rgba(180, 162, 246, 0.1) 100%);
+    background: var(--theme-gradient-overlay);
     opacity: 0;
     transition: opacity 0.3s ease;
     display: flex;
@@ -179,12 +173,11 @@
     font-size: 0.75rem;
     font-weight: 700;
     font-family: var(--font-mono);
-    color: #000;
-    background: #9DF0B3;
-    /* Mint Tonic */
+    color: var(--theme-text-inverse);
+    background: var(--theme-accent-success);
     padding: 2px 6px;
     border-radius: 4px;
-    box-shadow: 0 0 10px rgba(157, 240, 179, 0.4);
+    box-shadow: 0 0 10px rgba(var(--theme-accent-success-rgb), 0.4);
 }
 
 /* Format Tag */
@@ -196,9 +189,9 @@
     font-size: 0.65rem;
     font-family: var(--font-mono);
     text-transform: uppercase;
-    color: #A5DBF8;
-    background: rgba(165, 219, 248, 0.1);
-    border: 1px solid rgba(165, 219, 248, 0.3);
+    color: var(--theme-accent-secondary);
+    background: var(--theme-accent-secondary-muted);
+    border: 1px solid rgba(var(--theme-accent-secondary-rgb), 0.3);
     padding: 2px 6px;
     border-radius: 4px;
     letter-spacing: 0.05em;
@@ -229,7 +222,6 @@
 .anime-card__resume-btn {
     position: absolute;
     bottom: 15px;
-    /* Slightly higher than edge */
     right: 15px;
     top: auto;
     left: auto;
@@ -238,13 +230,13 @@
     height: 36px;
     border-radius: 50%;
     border: none;
-    background: rgba(56, 189, 248, 0.9);
-    color: #000;
+    background: var(--theme-accent-secondary);
+    color: var(--theme-text-inverse);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--theme-shadow-card);
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     opacity: 0;
     transform: scale(0.8);
@@ -256,22 +248,21 @@
 }
 
 .anime-card__resume-btn:hover {
-    background: #38bdf8;
+    background: var(--theme-accent-secondary-hover);
     transform: scale(1.15) !important;
-    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.6);
+    box-shadow: 0 6px 20px rgba(var(--theme-accent-secondary-rgb), 0.6);
 }
 
 .anime-card__resume-btn:active {
     transform: scale(0.95) !important;
     margin-left: 2px;
-    /* Optical centering for play icon */
 }
 
 /* --- Loading State --- */
 .anime-card__resume-btn--loading {
     cursor: wait;
     opacity: 0.8 !important;
-    background: rgba(56, 189, 248, 0.8) !important;
+    background: var(--theme-accent-secondary) !important;
     transform: scale(1) !important;
 }
 

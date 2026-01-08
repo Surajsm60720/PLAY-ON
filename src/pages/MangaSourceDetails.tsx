@@ -35,7 +35,7 @@ import {
 } from '../lib/localMangaDb';
 import { sendNotification } from '@tauri-apps/plugin-notification';
 import { syncMangaFromAniList } from '../lib/syncService';
-import { clearDiscordActivity, setBrowsingActivity } from '../services/discordRPC';
+import { setBrowsingActivity } from '../services/discordRPC';
 import { useAuth } from '../hooks/useAuth';
 import { queueChapterDownload, queueMultipleChapters, onDownloadProgress, isDownloadFolderConfigured } from '../services/downloadService';
 import { Dropdown } from '../components/ui/Dropdown';
