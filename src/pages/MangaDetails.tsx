@@ -109,7 +109,7 @@ function MangaDetails() {
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState(0);
     const [updating, setUpdating] = useState(false);
-    const [currentStatus, setCurrentStatus] = useState('CURRENT');
+    const [currentStatus, setCurrentStatus] = useState<string | null>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
 
 
@@ -126,7 +126,9 @@ function MangaDetails() {
                     setManga(data.data.Media as Manga);
                     if (data.data.Media.mediaListEntry) {
                         setProgress(data.data.Media.mediaListEntry.progress);
-                        setCurrentStatus(data.data.Media.mediaListEntry.status || 'CURRENT');
+                        setCurrentStatus(data.data.Media.mediaListEntry.status);
+                    } else {
+                        setCurrentStatus(null);
                     }
                 }
             } catch (err) {

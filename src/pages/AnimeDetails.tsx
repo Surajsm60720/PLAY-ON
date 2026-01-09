@@ -34,7 +34,7 @@ function AnimeDetails() {
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState(0);
     const [updating, setUpdating] = useState(false);
-    const [currentStatus, setCurrentStatus] = useState('CURRENT');
+    const [currentStatus, setCurrentStatus] = useState<string | null>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
 
     // Check if this anime is linked to a local folder
@@ -50,7 +50,9 @@ function AnimeDetails() {
                     setAnime(data);
                     if (data.mediaListEntry) {
                         setProgress(data.mediaListEntry.progress);
-                        setCurrentStatus(data.mediaListEntry.status || 'CURRENT');
+                        setCurrentStatus(data.mediaListEntry.status);
+                    } else {
+                        setCurrentStatus(null);
                     }
                 }
             } catch (err) {

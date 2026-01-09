@@ -823,3 +823,234 @@ export async function fetchUserStats() {
     fetchPolicy: 'network-only',
   });
 }
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+const NOTIFICATIONS_QUERY = gql`
+query ($page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
+    notifications {
+      ... on AiringNotification {
+        id
+        type
+        animeId
+        episode
+        contexts
+        createdAt
+        media {
+          title { english romaji }
+          coverImage { medium }
+        }
+      }
+      ... on ActivityMessageNotification {
+        id
+        type
+        activityId
+        context
+        createdAt
+        user { name avatar { medium } }
+      }
+      ... on ActivityMentionNotification {
+        id
+        type
+        activityId
+        context
+        createdAt
+        user { name avatar { medium } }
+      }
+      ... on FollowingNotification {
+        id
+        type
+        context
+        createdAt
+        user { name avatar { medium } }
+      }
+      ... on ActivityLikeNotification {
+        id
+        type
+        activityId
+        context
+        createdAt
+        user { name avatar { medium } }
+      }
+      ... on ActivityReplyNotification {
+        id
+        type
+        activityId
+        context
+        createdAt
+        user { name avatar { medium } }
+      }
+      ... on ThreadCommentMentionNotification {
+        id
+        type
+        context
+        createdAt
+        user { name avatar { medium } }
+      }
+      ... on RelatedMediaAdditionNotification {
+        id
+        type
+        context
+        createdAt
+        media {
+          title { english romaji }
+          coverImage { medium }
+        }
+      }
+      ... on MediaDataChangeNotification {
+        id
+        type
+        context
+        createdAt
+        media {
+          title { english romaji }
+          coverImage { medium }
+        }
+      }
+    }
+  }
+  Viewer {
+    id
+    unreadNotificationCount
+  }
+}
+`;
+
+export const USER_PROFILE_QUERY = gql`
+query ($name: String) {
+  User(name: $name) {
+    id
+    name
+    about(asHtml: false)
+    bannerImage
+    avatar {
+      large
+      medium
+    }
+    statistics {
+      anime {
+        count
+        meanScore
+        minutesWatched
+        episodesWatched
+      }
+      manga {
+        count
+        meanScore
+        chaptersRead
+        volumesRead
+      }
+    }
+    
+    # Favorites
+    favourites {
+      anime(perPage: 10) {
+        nodes {
+          id
+          title {
+            english
+            romaji
+          }
+          coverImage {
+            large
+          }
+          averageScore
+          episodes
+          format
+        }
+      }
+      manga(perPage: 10) {
+        nodes {
+          id
+          title {
+            english
+            romaji
+          }
+          coverImage {
+            large
+          }
+          averageScore
+          chapters
+          format
+        }
+      }
+      characters(perPage: 10) {
+        nodes {
+          id
+          name {
+            full
+          }
+          image {
+            large
+          }
+        }
+      }
+    }
+  }
+}
+`;
+
+/**
+ * Notification types from AniList
+ */
+export interface AniListNotification {
+  id: number;
+  type: string;
+  createdAt: number;
+  context?: string;
+  contexts?: string[];
+  episode?: number;
+  animeId?: number;
+  activityId?: number;
+  media?: {
+    title: { english?: string; romaji?: string };
+    coverImage?: { medium?: string };
+  };
+  user?: {
+    name: string;
+    avatar?: { medium?: string };
+  };
+}
+
+export interface NotificationsResponse {
+  notifications: AniListNotification[];
+  unreadCount: number;
+}
+
+/**
+ * Fetches the authenticated user's notifications.
+ */
+export async function fetchNotifications(page = 1, perPage = 20): Promise<NotificationsResponse> {
+  const result = await apolloClient.query({
+    query: NOTIFICATIONS_QUERY,
+    variables: { page, perPage },
+    fetchPolicy: 'network-only', // Always get fresh notifications
+  });
+
+  return {
+    notifications: result.data?.Page?.notifications || [],
+    unreadCount: result.data?.Viewer?.unreadNotificationCount || 0,
+  };
+}
+
+/**
+ * Marks notifications as read by resetting the notification count.
+ */
+export async function markNotificationsAsRead(): Promise<void> {
+  // AniList resets notification count when querying Page with resetNotificationCount: true
+  const RESET_QUERY = gql`
+    query ResetNotifications {
+      Page(perPage: 1, resetNotificationCount: true) {
+        pageInfo { total }
+      }
+    }
+  `;
+
+  await apolloClient.query({
+    query: RESET_QUERY,
+    fetchPolicy: 'network-only'
+  });
+}

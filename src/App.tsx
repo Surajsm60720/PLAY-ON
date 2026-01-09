@@ -10,6 +10,7 @@ import MangaSourceDetails from './pages/MangaSourceDetails';
 import MangaReader from './pages/MangaReader';
 import LocalFileReader from './pages/LocalFileReader';
 import History from './pages/History';
+import Notifications from './pages/Notifications';
 import Statistics from './pages/Statistics';
 import AnimeDetails from './pages/AnimeDetails';
 import MangaDetails from './pages/MangaDetails';
@@ -266,6 +267,7 @@ function App() {
                           <Route path="/manga-list" element={<MangaList />} />
                           <Route path="/local-manga" element={<LocalMangaList />} />
                           <Route path="/history" element={<History />} />
+                          <Route path="/notifications" element={<Notifications />} />
                           <Route path="/statistics" element={<Statistics />} />
 
                           {/* Dynamic route for anime details */}
@@ -276,7 +278,7 @@ function App() {
 
                           {/* Settings Route */}
                           <Route path="/settings" element={<Settings />} />
-                          <Route path="/profile" element={<UserProfile />} />
+                          <Route path="/user/:username" element={<UserProfile />} />
 
                           {/* Local Folder Route */}
                           <Route path="/local/:folderPath" element={<LocalFolder />} />

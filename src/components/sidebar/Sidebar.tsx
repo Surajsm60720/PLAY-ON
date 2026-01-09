@@ -5,8 +5,9 @@ import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
 import { useLocalMedia } from '../../context/LocalMediaContext';
 import SidebarItem from './SidebarItem';
-import { HistoryIcon, HomeIcon, FolderIcon, SettingsIcon, LibraryIcon, CompassIcon, FilmIcon, PlayIcon, ChartIcon } from '../ui/Icons';
+import { HistoryIcon, HomeIcon, FolderIcon, SettingsIcon, LibraryIcon, CompassIcon, FilmIcon, PlayIcon, ChartIcon, BellIcon } from '../ui/Icons';
 import UserProfileDialog from '../ui/UserProfileDialog';
+import { useAniListNotifications } from '../../hooks/useAniListNotifications';
 
 interface SidebarNavItem {
     label: string;
@@ -28,6 +29,9 @@ function Sidebar({ width: _width }: SidebarProps) {
     // Fetch local folder data
     const { addFolder, animeFolders, mangaFolders } = useLocalMedia();
     console.log("Sidebar: animeFolders:", animeFolders, "mangaFolders:", mangaFolders);
+
+    // Fetch AniList notifications
+    const { unreadCount } = useAniListNotifications();
 
     // Navigation Sections
     const homeItem: SidebarNavItem = { label: 'Home', path: '/home', icon: <HomeIcon size={20} /> };
@@ -378,6 +382,56 @@ function Sidebar({ width: _width }: SidebarProps) {
                 >
                     <HistoryIcon size={20} />
                 </button>
+
+                {/* Notifications Icon */}
+                {isAuthenticated && (
+                    <button
+                        onClick={() => navigate('/notifications')}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--color-text-muted)',
+                            cursor: 'pointer',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s',
+                            position: 'relative',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
+                            e.currentTarget.style.color = 'var(--color-text-main)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = 'var(--color-text-muted)';
+                        }}
+                        title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
+                    >
+                        <BellIcon size={20} />
+                        {unreadCount > 0 && (
+                            <span style={{
+                                position: 'absolute',
+                                top: 2,
+                                right: 2,
+                                background: 'var(--color-zen-accent)',
+                                color: '#000',
+                                borderRadius: '50%',
+                                width: 16,
+                                height: 16,
+                                fontSize: '0.6rem',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}>
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                        )}
+                    </button>
+                )}
 
                 {/* Settings Icon */}
                 <button
