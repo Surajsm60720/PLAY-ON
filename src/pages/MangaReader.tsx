@@ -478,9 +478,33 @@ function MangaReader() {
         syncChapter();
     }, [scrollProgress, sourceId, mangaId, chapterId, currentChapter, manga, mangaTitle, anilistMapping, malAuth]);
 
-    // Keyboard navigation
+    // Keyboard navigation + zoom shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Zoom shortcuts: Ctrl+Plus, Ctrl+Minus, Ctrl+0
+            if (e.ctrlKey && (e.key === '=' || e.key === '+')) {
+                e.preventDefault();
+                setZoom(z => Math.min(z + 100, 2000));
+                return;
+            }
+            if (e.ctrlKey && e.key === '-') {
+                e.preventDefault();
+                setZoom(z => Math.max(z - 100, 400));
+                return;
+            }
+            if (e.ctrlKey && e.key === '0') {
+                e.preventDefault();
+                setZoom(900); // Reset to default
+                return;
+            }
+            // Go back shortcut: Ctrl+Backspace
+            if (e.ctrlKey && e.key === 'Backspace') {
+                e.preventDefault();
+                navigate(-1);
+                return;
+            }
+
+            // Page navigation in single/double mode
             if (readingMode === 'single' || readingMode === 'double') {
                 if (e.key === 'ArrowRight' || e.key === 'd') {
                     goToNextPage();
@@ -488,6 +512,7 @@ function MangaReader() {
                     goToPrevPage();
                 }
             }
+            // Chapter navigation
             if (e.key === 'ArrowUp' && e.ctrlKey) {
                 goToPrevChapter();
             } else if (e.key === 'ArrowDown' && e.ctrlKey) {
@@ -498,6 +523,23 @@ function MangaReader() {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [readingMode, currentPage, pages.length, chapters, currentChapter]);
+
+    // Scroll wheel zoom (Ctrl+scroll)
+    useEffect(() => {
+        const handleWheel = (e: WheelEvent) => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    setZoom(z => Math.min(z + 50, 2000));
+                } else {
+                    setZoom(z => Math.max(z - 50, 400));
+                }
+            }
+        };
+
+        window.addEventListener('wheel', handleWheel, { passive: false });
+        return () => window.removeEventListener('wheel', handleWheel);
+    }, []);
 
 
 
@@ -559,6 +601,7 @@ function MangaReader() {
 
     const handleZoomIn = () => setZoom(z => Math.min(z + 100, 2000));
     const handleZoomOut = () => setZoom(z => Math.max(z - 100, 400));
+    const handleZoomReset = () => setZoom(900);
 
     const toggleFullscreen = async () => {
         try {
@@ -759,7 +802,9 @@ function MangaReader() {
                     <button className="control-btn" onClick={handleZoomOut} title="Zoom Out">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     </button>
-                    <span className="zoom-level">{Math.round((zoom / 900) * 100)}%</span>
+                    <button className="zoom-level" onClick={handleZoomReset} title="Reset Zoom (Ctrl+0)">
+                        {Math.round((zoom / 900) * 100)}%
+                    </button>
                     <button className="control-btn" onClick={handleZoomIn} title="Zoom In">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     </button>

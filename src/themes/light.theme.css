@@ -1,0 +1,182 @@
+/**
+ * Light Theme - "Serene Dawn"
+ * 
+ * A clean, bright theme for daytime viewing with
+ * the same peaceful aesthetic as the dark theme.
+ */
+
+:root[data-theme="light"] {
+    /* =========================================================================
+     CORE BACKGROUNDS
+     ========================================================================= */
+    --theme-bg-main: #f5f5f7;
+    --theme-bg-content: rgba(255, 255, 255, 0.85);
+    --theme-bg-card: #ffffff;
+    --theme-bg-glass: rgba(255, 255, 255, 0.75);
+    --theme-bg-glass-hover: rgba(0, 0, 0, 0.05);
+    --theme-bg-overlay: rgba(255, 255, 255, 0.8);
+
+    /* Zen palette backgrounds */
+    --theme-zen-black: #f5f5f7;
+    --theme-zen-gray: #e5e5e5;
+    --theme-zen-surface-low: #fafafa;
+    --theme-zen-surface-high: #ffffff;
+
+    /* =========================================================================
+     TEXT COLORS
+     ========================================================================= */
+    --theme-text-main: #1a1a1a;
+    --theme-text-muted: #666666;
+    --theme-text-highlight: #8b8bb5;
+    --theme-text-inverse: #ffffff;
+
+    /* =========================================================================
+     ACCENT PALETTE - Same hues, adjusted for light mode
+     ========================================================================= */
+
+    /* Primary: Lavender Mist (slightly deeper for contrast) */
+    --theme-accent-primary: #9B85E3;
+    --theme-accent-primary-rgb: 155, 133, 227;
+    --theme-accent-primary-hover: #8A72D6;
+    --theme-accent-primary-muted: rgba(155, 133, 227, 0.15);
+
+    /* Secondary: Sky Blue */
+    --theme-accent-secondary: #5BADE9;
+    --theme-accent-secondary-rgb: 91, 173, 233;
+    --theme-accent-secondary-hover: #4A9CDC;
+    --theme-accent-secondary-muted: rgba(91, 173, 233, 0.15);
+
+    /* Tertiary: Soft Peach */
+    --theme-accent-tertiary: #FF9A5C;
+    --theme-accent-tertiary-rgb: 255, 154, 92;
+    --theme-accent-tertiary-muted: rgba(255, 154, 92, 0.15);
+
+    /* Success: Mint Tonic */
+    --theme-accent-success: #4CD97A;
+    --theme-accent-success-rgb: 76, 217, 122;
+    --theme-accent-success-muted: rgba(76, 217, 122, 0.15);
+
+    /* Warning: Golden */
+    --theme-accent-warning: #F5C842;
+    --theme-accent-warning-rgb: 245, 200, 66;
+    --theme-accent-warning-muted: rgba(245, 200, 66, 0.15);
+
+    /* Danger */
+    --theme-accent-danger: #E85B5B;
+    --theme-accent-danger-rgb: 232, 91, 91;
+    --theme-accent-danger-muted: rgba(232, 91, 91, 0.15);
+    --theme-accent-danger-strong: #D64545;
+
+    /* Info */
+    --theme-accent-info: #5B9FE8;
+    --theme-accent-info-rgb: 91, 159, 232;
+    --theme-accent-info-muted: rgba(91, 159, 232, 0.15);
+
+    /* =========================================================================
+     EXTENDED PASTEL PALETTE
+     ========================================================================= */
+    --theme-pastel-purple: #A896D3;
+    --theme-pastel-pink: #F299AE;
+    --theme-pastel-green: #7DD4AB;
+    --theme-pastel-peach: #F5C996;
+    --theme-pastel-blue: #8FCCE8;
+    --theme-pastel-lavender: #C9A5CF;
+    --theme-pastel-mint: #94D9BE;
+    --theme-pastel-yellow: #F5E38C;
+
+    /* =========================================================================
+     BORDERS
+     ========================================================================= */
+    --theme-border-subtle: rgba(0, 0, 0, 0.08);
+    --theme-border-highlight: rgba(0, 0, 0, 0.15);
+    --theme-border-accent: rgba(155, 133, 227, 0.3);
+    --theme-border-accent-strong: rgba(155, 133, 227, 0.5);
+
+    /* =========================================================================
+     SHADOWS
+     ========================================================================= */
+    --theme-shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.08);
+    --theme-shadow-glow: 0 0 20px rgba(155, 133, 227, 0.15);
+    --theme-shadow-glow-strong: 0 0 30px rgba(155, 133, 227, 0.25);
+    --theme-shadow-elevated: 0 10px 40px rgba(0, 0, 0, 0.15);
+    --theme-shadow-dropdown: 0 4px 20px rgba(0, 0, 0, 0.1);
+    --theme-shadow-card: 0 4px 15px rgba(0, 0, 0, 0.08);
+    --theme-shadow-button: 0 4px 15px rgba(155, 133, 227, 0.2);
+
+    /* =========================================================================
+     GRADIENTS
+     ========================================================================= */
+    --theme-gradient-primary: linear-gradient(135deg, #9B85E3, #5BADE9);
+    --theme-gradient-secondary: linear-gradient(135deg, #5BADE9, #4CD97A);
+    --theme-gradient-accent: linear-gradient(135deg, #9B85E3 0%, #7B85E3 100%);
+    --theme-gradient-overlay: linear-gradient(to top,
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(250, 250, 252, 0.8) 30%,
+            rgba(155, 133, 227, 0.05) 100%);
+    --theme-gradient-bg-mesh:
+        radial-gradient(circle at 15% 50%, rgba(155, 133, 227, 0.08), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(91, 173, 233, 0.08), transparent 25%);
+    --theme-gradient-fade-down: linear-gradient(to bottom, transparent, var(--theme-bg-main));
+
+    /* =========================================================================
+     INTERACTIVE STATES
+     ========================================================================= */
+    --theme-hover-bg: rgba(0, 0, 0, 0.03);
+    --theme-active-bg: rgba(0, 0, 0, 0.06);
+    --theme-focus-ring: 0 0 0 3px rgba(155, 133, 227, 0.25);
+
+    /* =========================================================================
+     SCROLLBAR
+     ========================================================================= */
+    --theme-scrollbar-thumb: rgba(0, 0, 0, 0.15);
+    --theme-scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+    --theme-scrollbar-track: transparent;
+
+    /* =========================================================================
+     COMPONENT-SPECIFIC TOKENS
+     ========================================================================= */
+
+    /* Cards */
+    --theme-card-bg: var(--theme-bg-glass);
+    --theme-card-border: var(--theme-border-subtle);
+    --theme-card-hover-border: var(--theme-border-accent);
+
+    /* Inputs */
+    --theme-input-bg: rgba(0, 0, 0, 0.03);
+    --theme-input-border: var(--theme-border-subtle);
+    --theme-input-focus-border: var(--theme-accent-primary);
+    --theme-input-placeholder: var(--theme-text-muted);
+
+    /* Buttons */
+    --theme-btn-primary-bg: var(--theme-gradient-primary);
+    --theme-btn-primary-text: #ffffff;
+    --theme-btn-secondary-bg: var(--theme-bg-glass);
+    --theme-btn-secondary-text: var(--theme-text-main);
+    --theme-btn-secondary-border: var(--theme-border-subtle);
+
+    /* Badges / Pills */
+    --theme-badge-bg: rgba(255, 255, 255, 0.9);
+    --theme-badge-border: rgba(0, 0, 0, 0.1);
+
+    /* Progress / Status */
+    --theme-progress-bg: var(--theme-border-subtle);
+    --theme-progress-fill: var(--theme-gradient-primary);
+
+    /* Status indicators */
+    --theme-status-online: #4CD97A;
+    --theme-status-offline: #E85B5B;
+    --theme-status-away: #F5C842;
+
+    /* Toggle switch */
+    --theme-toggle-off-bg: rgba(0, 0, 0, 0.15);
+    --theme-toggle-on-bg: var(--theme-gradient-primary);
+    --theme-toggle-knob: #ffffff;
+
+    /* Tooltip */
+    --theme-tooltip-bg: rgba(26, 26, 26, 0.95);
+    --theme-tooltip-text: #ffffff;
+
+    /* Selection */
+    --theme-selection-bg: rgba(155, 133, 227, 0.2);
+    --theme-selection-text: var(--theme-text-main);
+}

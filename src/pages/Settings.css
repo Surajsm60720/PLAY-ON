@@ -58,9 +58,9 @@
     gap: 6px;
     padding: 6px 14px;
     border-radius: 20px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    color: var(--color-text-muted);
+    background: var(--theme-hover-bg);
+    border: 1px solid var(--theme-border-subtle);
+    color: var(--theme-text-muted);
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
@@ -71,16 +71,16 @@
 }
 
 .settings-tab:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--color-text-main);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: var(--theme-bg-glass-hover);
+    color: var(--theme-text-main);
+    border-color: var(--theme-border-highlight);
 }
 
 .settings-tab.active {
-    background: rgba(180, 162, 246, 0.2);
-    color: #fff;
-    border: 1px solid rgba(180, 162, 246, 0.3);
-    box-shadow: 0 0 10px rgba(180, 162, 246, 0.1);
+    background: var(--theme-accent-primary-muted);
+    color: var(--theme-text-main);
+    border: 1px solid var(--theme-border-accent);
+    box-shadow: var(--theme-shadow-glow);
 }
 
 .settings-tab-icon {
@@ -203,7 +203,7 @@
 }
 
 .toggle-switch.active {
-    background: linear-gradient(135deg, #B4A2F6, #A5DBF8);
+    background: var(--theme-gradient-primary);
     border-color: transparent;
 }
 
@@ -250,8 +250,8 @@
 
 .dropdown-select:focus {
     outline: none;
-    border-color: #B4A2F6;
-    box-shadow: 0 0 0 3px rgba(180, 162, 246, 0.15);
+    border-color: var(--theme-accent-primary);
+    box-shadow: var(--theme-focus-ring);
 }
 
 .dropdown-select option {
@@ -292,18 +292,8 @@
 }
 
 .theme-option.active {
-    background: linear-gradient(135deg, rgba(180, 162, 246, 0.2), rgba(165, 219, 248, 0.15));
-    color: var(--color-text-main);
-    /* In dark mode this might need to be white, but let's try text-main */
-}
-
-/* Special case: Active theme option text should probably be highlighted */
-[data-theme="dark"] .theme-option.active {
-    color: #fff;
-}
-
-[data-theme="light"] .theme-option.active {
-    color: #000;
+    background: var(--theme-accent-primary-muted);
+    color: var(--theme-text-main);
     font-weight: 600;
 }
 
@@ -329,8 +319,8 @@
 
 .setting-input:focus {
     outline: none;
-    border-color: #B4A2F6;
-    box-shadow: 0 0 0 3px rgba(180, 162, 246, 0.15);
+    border-color: var(--theme-accent-primary);
+    box-shadow: var(--theme-focus-ring);
 }
 
 .setting-input::placeholder {
@@ -362,7 +352,7 @@
     -webkit-appearance: none;
     width: 18px;
     height: 18px;
-    background: linear-gradient(135deg, #B4A2F6, #A5DBF8);
+    background: var(--theme-gradient-primary);
     border-radius: 50%;
     cursor: pointer;
     transition: transform 0.2s ease;
@@ -375,7 +365,7 @@
 .slider-value {
     font-size: 14px;
     font-weight: 600;
-    color: #B4A2F6;
+    color: var(--theme-accent-primary);
     min-width: 24px;
 }
 
@@ -399,10 +389,10 @@
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    background: linear-gradient(135deg, rgba(180, 162, 246, 0.15), rgba(165, 219, 248, 0.1));
+    background: var(--theme-accent-primary-muted);
     border-radius: 8px;
     font-size: 13px;
-    color: var(--color-text-main);
+    color: var(--theme-text-main);
 }
 
 .tag-remove {
@@ -412,17 +402,17 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--theme-hover-bg);
     border: none;
-    color: var(--color-text-muted);
+    color: var(--theme-text-muted);
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .tag-remove:hover {
-    background: rgba(255, 100, 100, 0.3);
-    color: #fff;
+    background: var(--theme-accent-danger-muted);
+    color: var(--theme-text-main);
 }
 
 .tag-input {
@@ -463,24 +453,24 @@
 }
 
 .setting-button.danger {
-    border-color: rgba(255, 100, 100, 0.3);
-    color: #ff6b6b;
+    border-color: var(--theme-accent-danger-muted);
+    color: var(--theme-accent-danger-strong);
 }
 
 .setting-button.danger:hover {
-    background: rgba(255, 100, 100, 0.1);
-    border-color: rgba(255, 100, 100, 0.4);
+    background: var(--theme-accent-danger-muted);
+    border-color: var(--theme-accent-danger);
 }
 
 .setting-button.primary {
-    background: linear-gradient(135deg, #B4A2F6, #A5DBF8);
+    background: var(--theme-gradient-primary);
     border: none;
-    color: #1a1a1e;
+    color: var(--theme-text-inverse);
 }
 
 .setting-button.primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(180, 162, 246, 0.3);
+    box-shadow: var(--theme-shadow-button);
 }
 
 /* ============================================================================
@@ -498,13 +488,13 @@
 }
 
 .status-badge.connected {
-    background: rgba(157, 240, 179, 0.15);
-    color: #9DF0B3;
+    background: var(--theme-accent-success-muted);
+    color: var(--theme-accent-success);
 }
 
 .status-badge.disconnected {
-    background: rgba(255, 100, 100, 0.15);
-    color: #ff6b6b;
+    background: var(--theme-accent-danger-muted);
+    color: var(--theme-accent-danger-strong);
 }
 
 .status-dot {
@@ -526,16 +516,16 @@
 
 .version-badge {
     padding: 8px 16px;
-    background: linear-gradient(135deg, rgba(180, 162, 246, 0.1), rgba(165, 219, 248, 0.08));
+    background: var(--theme-accent-primary-muted);
     border-radius: 10px;
-    border: 1px solid rgba(180, 162, 246, 0.2);
+    border: 1px solid var(--theme-border-accent);
 }
 
 .version-number {
     font-family: 'Space Mono', monospace;
     font-size: 16px;
     font-weight: 600;
-    background: linear-gradient(135deg, #B4A2F6, #A5DBF8);
+    background: var(--theme-gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -573,20 +563,20 @@
 
 .folder-icon {
     font-size: 16px;
-    color: #FFBE98;
+    color: var(--theme-accent-tertiary);
 }
 
 .folder-remove {
     padding: 6px 12px;
     background: transparent;
-    border: 1px solid rgba(255, 100, 100, 0.3);
+    border: 1px solid var(--theme-accent-danger-muted);
     border-radius: 8px;
-    color: #ff6b6b;
+    color: var(--theme-accent-danger-strong);
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .folder-remove:hover {
-    background: rgba(255, 100, 100, 0.1);
+    background: var(--theme-accent-danger-muted);
 }

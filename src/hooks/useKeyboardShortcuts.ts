@@ -97,6 +97,10 @@ export function useKeyboardShortcuts(callbacks: ShortcutCallbacks = {}) {
                         (document.activeElement as HTMLElement)?.blur?.();
                         navigate('/profile');
                         break;
+                    case 'goBack':
+                        (document.activeElement as HTMLElement)?.blur?.();
+                        navigate(-1);
+                        break;
                     case 'escape':
                         // Blur any focused element (exit from input)
                         (document.activeElement as HTMLElement)?.blur?.();

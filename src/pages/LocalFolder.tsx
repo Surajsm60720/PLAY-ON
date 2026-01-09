@@ -116,6 +116,7 @@ function LocalFolder() {
 
     const [watchedProgress, setWatchedProgress] = useState<number>(0);
     const [watchedVolumes, setWatchedVolumes] = useState<number>(0);
+    const [progressLoading, setProgressLoading] = useState(false);
 
     // Filter State
     const [filterStatus, setFilterStatus] = useState<'all' | 'watched' | 'unwatched'>('all');
@@ -174,6 +175,7 @@ function LocalFolder() {
     useEffect(() => {
         async function fetchProgress() {
             if (currentMapping?.anilistId) {
+                setProgressLoading(true);
                 try {
                     let details;
                     if (mediaType === 'MANGA') {
@@ -192,6 +194,8 @@ function LocalFolder() {
                     }
                 } catch (err) {
                     console.error("Failed to fetch media progress:", err);
+                } finally {
+                    setProgressLoading(false);
                 }
             } else {
                 setWatchedProgress(0);
@@ -199,7 +203,7 @@ function LocalFolder() {
             }
         }
         fetchProgress();
-    }, [currentMapping, getAnimeDetails, getMangaDetails, mediaType]);
+    }, [currentMapping?.anilistId, getAnimeDetails, getMangaDetails, mediaType]);
 
 
     const handleItemClick = async (item: FileItem) => {
@@ -560,7 +564,20 @@ function LocalFolder() {
                                     {currentMapping.animeName}
                                 </span>
                             </div>
-                            {nextEpisodeFile && (
+                            {progressLoading ? (
+                                <button
+                                    disabled
+                                    className="ml-2 px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 opacity-70"
+                                    style={{
+                                        fontFamily: 'var(--font-rounded)',
+                                        background: 'linear-gradient(135deg, var(--color-mint-tonic), #6ed1a8)',
+                                        color: '#0a0a0f',
+                                    }}
+                                >
+                                    <span className="animate-spin">⟳</span>
+                                    Loading...
+                                </button>
+                            ) : nextEpisodeFile && (
                                 <button
                                     onClick={handleResumeClick}
                                     className="ml-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 hover:scale-105 flex items-center gap-2"

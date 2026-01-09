@@ -142,6 +142,16 @@
     font-weight: 500;
     min-width: 45px;
     text-align: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.zoom-level:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .reader-controls-top.visible {

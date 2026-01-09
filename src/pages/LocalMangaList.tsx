@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     getLibraryEntries,
     LocalMangaEntry,
@@ -14,7 +15,8 @@ import { syncMangaFromAniList } from '../lib/syncService';
 import { PlayIcon } from '../components/ui/Icons';
 import RefreshButton from '../components/ui/RefreshButton';
 import AnimeCard from '../components/ui/AnimeCard';
-import { Dropdown } from '../components/ui/Dropdown';
+
+import { CategoryPills } from '../components/ui/CategoryPills';
 
 function LocalMangaList() {
     const [entries, setEntries] = useState<LocalMangaEntry[]>([]);
@@ -23,30 +25,38 @@ function LocalMangaList() {
     const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [filterStatus, setFilterStatus] = useState<'all' | 'read' | 'unread'>('all');
+    const [showFilterMenu, setShowFilterMenu] = useState(false);
 
     // Add Category Dialog State
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
+    const [isFabHovered, setIsFabHovered] = useState(false);
 
     // UI State (matching AnimeList)
     const [searchQuery, setSearchQuery] = useState('');
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [isSearchHovered, setIsSearchHovered] = useState(false);
-    const [isSearchFocused, setIsSearchFocused] = useState(false);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+        const saved = localStorage.getItem('localMangaViewMode');
+        return saved === 'list' ? 'list' : 'grid';
+    });
     const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Persist view mode changes
+    const handleViewModeChange = (mode: 'grid' | 'list') => {
+        setViewMode(mode);
+        localStorage.setItem('localMangaViewMode', mode);
+    };
 
     const handleMouseEnter = () => {
         if (hoverTimeoutRef.current) {
             clearTimeout(hoverTimeoutRef.current);
             hoverTimeoutRef.current = null;
         }
-        setIsSearchHovered(true);
     };
 
     const handleMouseLeave = () => {
-        hoverTimeoutRef.current = setTimeout(() => {
-            setIsSearchHovered(false);
-        }, 150);
+        if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+        }
     };
 
     // Context Menu State
@@ -163,7 +173,7 @@ function LocalMangaList() {
         <div className="max-w-[1600px] mx-auto pb-10 px-6 min-h-screen">
 
             {/* Header / Stats Bar (Floating Style) */}
-            <div className="sticky top-[-28px] z-30 mx-auto w-full max-w-[950px] h-[52px] relative flex items-center justify-center pointer-events-none -mt-4 mb-10">
+            <div className="sticky top-[-28px] z-30 mx-auto w-full max-w-[1200px] h-[52px] relative flex items-center justify-center pointer-events-none -mt-4 mb-10">
 
                 {/* 1. Search Island (Left) */}
                 <div
@@ -178,68 +188,64 @@ function LocalMangaList() {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onFocus={() => setIsSearchFocused(true)}
-                        onBlur={() => setIsSearchFocused(false)}
                         placeholder="Search library..."
                         className="w-full h-full bg-transparent border-none outline-none text-white text-sm font-medium pl-14 pr-4 placeholder-white/30 cursor-pointer focus:cursor-text"
                         style={{ fontFamily: 'var(--font-rounded)' }}
                     />
                 </div>
 
-                {/* 2. Main Filter Pill (Right) */}
+
+
+                {/* 3. Filter/Actions Pill (Right) */}
                 <div className="absolute right-4 top-0 pointer-events-auto flex flex-wrap items-center justify-between gap-4 py-2 px-3 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl transition-all duration-300">
 
-                    {/* Read/Unread Filter */}
-                    <div className="w-32">
-                        <Dropdown
-                            value={filterStatus}
-                            onChange={(val) => setFilterStatus(val as 'all' | 'read' | 'unread')}
-                            options={[
-                                { value: 'all', label: 'All' },
-                                { value: 'read', label: 'Read' },
-                                { value: 'unread', label: 'Unread' }
-                            ]}
-                            className="text-xs"
-                        />
-                    </div>
-
-                    <div className="w-[1px] h-6 bg-white/10"></div>
-
-                    {/* Categories */}
-                    <div className="flex flex-wrap items-center gap-1">
-                        {categories.map(cat => {
-                            const isCompact = searchQuery || isSearchHovered || isSearchFocused;
-                            return (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setActiveCategoryId(cat.id)}
-                                    onContextMenu={(e) => {
-                                        if (cat.id !== 'default') {
-                                            e.preventDefault();
-                                            handleDeleteCategory(cat.id);
-                                        }
-                                    }}
-                                    className={`flex items-center gap-2 rounded-full text-sm font-bold transition-all duration-200 border ${activeCategoryId === cat.id
-                                        ? 'bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)]'
-                                        : 'bg-transparent border-transparent hover:bg-white/10'
-                                        } ${isCompact ? 'p-2' : 'px-4 py-2'}`}
-                                    style={{ fontFamily: 'var(--font-rounded)', color: activeCategoryId === cat.id ? 'black' : 'var(--color-text-muted)' }}
-                                    title={cat.name}
-                                >
-                                    <span>{cat.name}</span>
-                                </button>
-                            );
-                        })}
-
-                        {/* Add Category Button */}
+                    {/* Read/Unread Filter - Dropdown Trigger */}
+                    <div className="relative">
                         <button
-                            onClick={() => setIsAddDialogOpen(true)}
-                            className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/20 text-white/60 hover:text-white transition-colors border border-white/5"
-                            title="Add Category"
+                            onClick={() => setShowFilterMenu(!showFilterMenu)}
+                            className={`p-2 rounded-full transition-all flex items-center gap-2 ${filterStatus !== 'all' || showFilterMenu ? 'bg-white/20 text-white shadow-sm' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                            title="Filter Status"
                         >
-                            +
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                            {filterStatus !== 'all' && (
+                                <span className="text-[10px] font-bold uppercase tracking-wider bg-purple-500 text-white px-1.5 rounded-sm">
+                                    {filterStatus}
+                                </span>
+                            )}
                         </button>
+
+                        {/* Dropdown Menu */}
+                        {showFilterMenu && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setShowFilterMenu(false)}></div>
+                                <div className="absolute top-full right-0 mt-3 w-40 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl p-1.5 z-50 flex flex-col gap-1 backdrop-blur-xl">
+                                    <button
+                                        onClick={() => { setFilterStatus('all'); setShowFilterMenu(false); }}
+                                        className={`px-3 py-2 rounded-lg text-sm text-left flex items-center justify-between transition-colors ${filterStatus === 'all' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                                    >
+                                        <span>All</span>
+                                        {filterStatus === 'all' && <span className="text-purple-400">✓</span>}
+                                    </button>
+                                    <button
+                                        onClick={() => { setFilterStatus('read'); setShowFilterMenu(false); }}
+                                        className={`px-3 py-2 rounded-lg text-sm text-left flex items-center justify-between transition-colors ${filterStatus === 'read' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                                    >
+                                        <span>Read</span>
+                                        {filterStatus === 'read' && <span className="text-purple-400">✓</span>}
+                                    </button>
+                                    <button
+                                        onClick={() => { setFilterStatus('unread'); setShowFilterMenu(false); }}
+                                        className={`px-3 py-2 rounded-lg text-sm text-left flex items-center justify-between transition-colors ${filterStatus === 'unread' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                                    >
+                                        <span>Unread</span>
+                                        {filterStatus === 'unread' && <span className="text-purple-400">✓</span>}
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
+
+
 
                     {/* Refresh Button */}
                     <div className="flex items-center pl-2 border-l border-white/10">
@@ -254,7 +260,7 @@ function LocalMangaList() {
                     {/* View Toggle */}
                     <div className="flex items-center gap-2 pl-2 border-l border-white/10">
                         <button
-                            onClick={() => setViewMode('grid')}
+                            onClick={() => handleViewModeChange('grid')}
                             className={`p-2 rounded-full transition-all hover:bg-white/5 ${viewMode === 'grid' ? 'bg-white/20 shadow-sm' : ''}`}
                             style={{ color: viewMode === 'grid' ? 'var(--color-text-main)' : 'var(--color-text-muted)' }}
                             title="Grid View"
@@ -262,7 +268,7 @@ function LocalMangaList() {
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                         </button>
                         <button
-                            onClick={() => setViewMode('list')}
+                            onClick={() => handleViewModeChange('list')}
                             className={`p-2 rounded-full transition-all ${viewMode === 'list' ? 'bg-white/20 text-white shadow-sm' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
                             title="List View"
                         >
@@ -271,6 +277,8 @@ function LocalMangaList() {
                     </div>
                 </div>
             </div>
+
+
 
             {loading ? (
                 <div className="flex items-center justify-center h-64 text-white/40">Loading...</div>
@@ -312,7 +320,8 @@ function LocalMangaList() {
                                 />
                                 {/* Continue Reading Button */}
                                 <button
-                                    className="absolute bottom-2 right-2 p-3 bg-purple-600 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 hover:scale-110 hover:bg-purple-500"
+                                    className="absolute bottom-2 right-2 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 hover:scale-110"
+                                    style={{ backgroundColor: 'var(--theme-accent-primary)' }}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         if (entry.sourceId === 'local' && entry.sourceMangaId) {
@@ -321,6 +330,26 @@ function LocalMangaList() {
                                         } else if (entry.lastReadChapterId && entry.sourceId && entry.sourceMangaId) {
                                             // Resume from last read chapter
                                             navigate(`/read/${entry.sourceId}/${entry.lastReadChapterId}?mangaId=${entry.sourceMangaId}&title=${encodeURIComponent(entry.title)}`);
+                                        } else if (entry.chapters && entry.chapters.length > 0 && entry.sourceId && entry.sourceMangaId) {
+                                            // Find next chapter from cached chapters
+                                            // Chapters are typically sorted newest first, so we need to find chapter (entry.chapter + 1)
+                                            // or the first unread chapter
+                                            const nextChapterNum = entry.chapter + 1;
+                                            const nextChapter = entry.chapters.find((ch: any) => {
+                                                const chNum = parseFloat(ch.chapter || ch.number || '0');
+                                                return chNum === nextChapterNum;
+                                            });
+                                            if (nextChapter) {
+                                                navigate(`/read/${entry.sourceId}/${nextChapter.id}?mangaId=${entry.sourceMangaId}&title=${encodeURIComponent(entry.title)}`);
+                                            } else {
+                                                // Fallback to first chapter if next not found
+                                                const firstChapter = entry.chapters[entry.chapters.length - 1]; // Last in array = oldest = first chapter
+                                                if (firstChapter) {
+                                                    navigate(`/read/${entry.sourceId}/${firstChapter.id}?mangaId=${entry.sourceMangaId}&title=${encodeURIComponent(entry.title)}`);
+                                                } else {
+                                                    navigate(`/manga/${entry.sourceId}/${entry.sourceMangaId}`);
+                                                }
+                                            }
                                         } else if (entry.sourceId && entry.sourceMangaId) {
                                             // Go to manga details to pick a chapter
                                             navigate(`/manga/${entry.sourceId}/${entry.sourceMangaId}`);
@@ -369,13 +398,30 @@ function LocalMangaList() {
                                 </div>
                                 <div className="flex justify-end">
                                     <button
-                                        className="p-2.5 bg-purple-600 rounded-full shadow-lg hover:scale-110 hover:bg-purple-500 transition-all duration-200"
+                                        className="p-2.5 rounded-full shadow-lg hover:scale-110 transition-all duration-200"
+                                        style={{ backgroundColor: 'var(--theme-accent-primary)' }}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (entry.sourceId === 'local' && entry.sourceMangaId) {
                                                 navigate(`/local/${encodeURIComponent(entry.sourceMangaId)}`, { state: { type: 'MANGA' } });
                                             } else if (entry.lastReadChapterId && entry.sourceId && entry.sourceMangaId) {
                                                 navigate(`/read/${entry.sourceId}/${entry.lastReadChapterId}?mangaId=${entry.sourceMangaId}&title=${encodeURIComponent(entry.title)}`);
+                                            } else if (entry.chapters && entry.chapters.length > 0 && entry.sourceId && entry.sourceMangaId) {
+                                                const nextChapterNum = entry.chapter + 1;
+                                                const nextChapter = entry.chapters.find((ch: any) => {
+                                                    const chNum = parseFloat(ch.chapter || ch.number || '0');
+                                                    return chNum === nextChapterNum;
+                                                });
+                                                if (nextChapter) {
+                                                    navigate(`/read/${entry.sourceId}/${nextChapter.id}?mangaId=${entry.sourceMangaId}&title=${encodeURIComponent(entry.title)}`);
+                                                } else {
+                                                    const firstChapter = entry.chapters[entry.chapters.length - 1];
+                                                    if (firstChapter) {
+                                                        navigate(`/read/${entry.sourceId}/${firstChapter.id}?mangaId=${entry.sourceMangaId}&title=${encodeURIComponent(entry.title)}`);
+                                                    } else {
+                                                        navigate(`/manga/${entry.sourceId}/${entry.sourceMangaId}`);
+                                                    }
+                                                }
                                             } else if (entry.sourceId && entry.sourceMangaId) {
                                                 navigate(`/manga/${entry.sourceId}/${entry.sourceMangaId}`);
                                             }
@@ -491,6 +537,52 @@ function LocalMangaList() {
                     </div>
                 </div>
             )}
+
+            {/* Bottom Floating Area */}
+            <div className="fixed bottom-0 left-0 w-full z-40 pointer-events-none h-0">
+
+                {/* Center: Category Pills */}
+                <div className="absolute bottom-8 pointer-events-auto shadow-2xl rounded-full max-w-[calc(100vw-160px)]" style={{ left: 'calc(50% + 100px)', transform: 'translateX(-50%)' }}>
+                    <CategoryPills
+                        categories={categories}
+                        activeCategory={activeCategoryId}
+                        onCategoryChange={setActiveCategoryId}
+                        onCategoryDelete={handleDeleteCategory}
+                    />
+                </div>
+
+
+            </div>
+
+            {/* Floating Action Button (FAB) for Adding Categories */}
+            <div className="fixed bottom-8 right-8 z-40 flex items-center gap-3">
+                <AnimatePresence>
+                    {isFabHovered && (
+                        <motion.div
+                            initial={{ opacity: 0, x: 20, scale: 0.8 }}
+                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                            exit={{ opacity: 0, x: 10, scale: 0.8 }}
+                            className="bg-black/80 backdrop-blur-md text-white text-sm font-bold px-4 py-2 rounded-xl border border-white/10 shadow-2xl skew-x-[-12deg]"
+                            style={{ fontFamily: 'var(--font-rounded)' }}
+                        >
+                            <div className="skew-x-[12deg]">New Category</div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <motion.button
+                    onClick={() => setIsAddDialogOpen(true)}
+                    onHoverStart={() => setIsFabHovered(true)}
+                    onHoverEnd={() => setIsFabHovered(false)}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                    className="w-14 h-14 rounded-full flex items-center justify-center text-white shadow-[0_8px_30px_rgba(0,0,0,0.3)] border border-white/10"
+                    style={{ backgroundColor: 'var(--theme-accent-primary)' }}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </motion.button>
+            </div>
         </div>
     );
 }
