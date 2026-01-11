@@ -13,10 +13,10 @@
 return {
     id: 'animepahe',
     name: 'AnimePahe',
-    baseUrl: 'https://animepahe.ru',
+    baseUrl: 'https://animepahe.si',
     lang: 'en',
     version: '1.0.0',
-    iconUrl: 'https://animepahe.ru/favicon.ico',
+    iconUrl: 'https://animepahe.si/favicon.ico',
 
     /**
      * Search for anime

@@ -38,6 +38,7 @@ function Sidebar({ width: _width }: SidebarProps) {
 
     const animeSection: SidebarNavItem[] = [
         { label: 'Anime List', path: '/anime-list', icon: <FilmIcon size={20} /> },
+        { label: 'Browse Anime', path: '/anime-browse', icon: <CompassIcon size={20} /> },
         { label: 'Statistics', path: '/statistics', icon: <ChartIcon size={20} /> },
     ];
 
