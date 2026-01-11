@@ -9,7 +9,7 @@ export interface StatusOption {
 }
 
 interface StatusDropdownProps {
-    currentStatus: string;
+    currentStatus: string | null;
     onStatusChange: (status: string) => void;
     options: StatusOption[];
     loading?: boolean;
@@ -37,8 +37,18 @@ const getGlowStyle = (status: string) => {
 export function StatusDropdown({ currentStatus, onStatusChange, options, loading = false, className = '' }: StatusDropdownProps) {
     const [isOpen, setIsOpen] = useState(false);
 
-    const currentOption = options.find(o => o.value === currentStatus) || options[0];
-    const currentColor = getStatusColor(currentStatus);
+    // Handle null/empty status (Not in list)
+    const currentOption = options.find(o => o.value === currentStatus) || {
+        value: '',
+        label: 'Add to List',
+        icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        )
+    };
+    const currentColor = currentStatus ? getStatusColor(currentStatus) : '#ffffff';
 
     const handleSelect = (value: string) => {
         onStatusChange(value);
@@ -49,13 +59,13 @@ export function StatusDropdown({ currentStatus, onStatusChange, options, loading
         <div className={`relative ${className}`}>
             <motion.button
                 onClick={() => !loading && setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-xl border backdrop-blur-md transition-all duration-300"
-                style={{
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border backdrop-blur-md transition-all duration-300 ${!currentStatus ? 'bg-white/5 border-white/20 hover:bg-white/10' : ''}`}
+                style={currentStatus ? {
                     backgroundColor: `${currentColor}15`, // 15% opacity background
                     borderColor: `${currentColor}40`,     // 40% opacity border
                     color: currentColor,
                     boxShadow: getGlowStyle(currentStatus)
-                }}
+                } : {}}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
             >

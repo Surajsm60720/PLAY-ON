@@ -10,6 +10,7 @@ import { useMangaMappings } from '../hooks/useMangaMappings';
 import { useFolderMappings } from '../hooks/useFolderMappings';
 import { getMangaEntryByAnilistId, updateMangaCache } from '../lib/localMangaDb';
 import { ExtensionManager } from '../services/ExtensionManager';
+import { getStats, formatTime, UserStats } from '../services/StatsService';
 
 function Home() {
     const navigate = useNavigate();
@@ -17,6 +18,11 @@ function Home() {
     const { mappings: mangaMappings } = useMangaMappings();
     const { mappings: folderMappings } = useFolderMappings();
     const [resumingMangaId, setResumingMangaId] = useState<number | null>(null);
+    const [stats, setStats] = useState<UserStats | null>(null);
+
+    useEffect(() => {
+        setStats(getStats());
+    }, []);
 
     // Fetch Anime Data with useQuery for instant cache access
     const { data: userData, loading: userLoading, refetch: refetchUser } = useQuery(USER_MEDIA_LIST_QUERY, {
@@ -179,16 +185,6 @@ function Home() {
         }
     }, [navigate]);
 
-    // Responsive item count based on window width
-    // XL breakpoint is 1280px. Below that, we stack and show 1 row (4 items). Above that, 2 rows (8 items).
-    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-
-    useEffect(() => {
-        const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
     // Discord RPC - Set browsing activity when on Home
     useEffect(() => {
         // Dynamic import to avoid SSR issues if any, and keep bundle size manageable
@@ -197,146 +193,178 @@ function Home() {
         });
     }, [user]);
 
-    const itemCount = windowWidth >= 1280 ? 8 : 4;
-
     return (
-        <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
-            <div className="mb-8 mt-6 px-4">
-                <h1 className="text-4xl font-bold mb-2" style={{ fontFamily: 'var(--font-rounded)', letterSpacing: '-0.02em', textShadow: '0 4px 12px rgba(0,0,0,0.1)', color: 'var(--color-text-main)' }}>
-                    {isAuthenticated ? `Welcome back, ${user?.name}` : "Dashboard"}
-                </h1>
-                <p className="text-lg font-medium" style={{ fontFamily: 'var(--font-rounded)', color: 'var(--color-text-muted)' }}>
-                    {isAuthenticated ? "Ready to dive back in?" : "Track your anime journey"}
-                </p>
-            </div>
+        <div className="h-full flex flex-col" style={{ maxWidth: '1800px', margin: '0 auto', height: 'calc(100vh - 120px)' }}>
+            <div className="flex flex-col gap-6 pb-2 px-2 overflow-y-auto">
+                {/* Lists Row */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 shrink-0">
 
-            {/* Bento Grid layout */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 px-4 pb-10">
+                    {/* Anime List Box */}
+                    <div className="bg-black/20 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg relative group h-fit">
+                        <div className="flex items-center justify-between mb-4 shrink-0 z-10 relative">
+                            <div className="flex items-center gap-4">
+                                <h3 className="text-base font-bold flex items-center gap-2" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em', color: 'var(--color-text-main)' }}>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-zen-accent)] shadow-[0_0_8px_var(--color-zen-accent)]"></div>
+                                    {isAuthenticated ? "WATCHING" : "TRENDING"}
+                                </h3>
+                                {isAuthenticated && (
+                                    <RefreshButton
+                                        onClick={() => refetchUser()}
+                                        loading={userLoading}
+                                        title="Refresh"
+                                        iconSize={14}
+                                    />
+                                )}
+                            </div>
 
-                {/* Anime Bento Box */}
-                <div className="bg-black/20 backdrop-blur-xl border border-white/5 rounded-3xl p-6 overflow-hidden flex flex-col h-full shadow-xl">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-bold flex items-center gap-3" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em', color: 'var(--color-text-main)' }}>
-                            <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-zen-accent)] shadow-[0_0_8px_var(--color-zen-accent)]"></div>
-                            {isAuthenticated ? "WATCHING" : "TRENDING"}
-                        </h3>
-                        {isAuthenticated && (
-                            <RefreshButton
-                                onClick={() => refetchUser()}
-                                loading={userLoading}
-                                title="Refresh List"
-                                iconSize={16}
-                            />
+                            <button
+                                onClick={() => navigate('/anime-list?status=Watching')}
+                                className="text-xs font-bold tracking-wide hover:text-white transition-colors flex items-center gap-1 opacity-60 hover:opacity-100"
+                                style={{
+                                    color: 'var(--color-zen-accent)',
+                                    fontFamily: 'var(--font-rounded)',
+                                }}
+                            >
+                                VIEW ALL <span className="text-[10px]">↗</span>
+                            </button>
+                        </div>
+
+                        {!userData && animeLoading ? (
+                            <div className="flex-1 flex items-center justify-center"><Loading inline /></div>
+                        ) : animeList.length > 0 ? (
+                            <div className="">
+                                <div className="grid grid-cols-5 gap-3">
+                                    {animeList.slice(0, 5).map((anime: any) => (
+                                        <AnimeCard
+                                            key={anime.id}
+                                            anime={isAuthenticated ? {
+                                                id: anime.id,
+                                                title: anime.title,
+                                                coverImage: anime.coverImage,
+                                                episodes: anime.episodes,
+                                                format: anime.format,
+                                                averageScore: anime.averageScore
+                                            } : anime}
+                                            progress={isAuthenticated ? anime.progress : undefined}
+                                            onClick={() => handleAnimeClick(anime.id)}
+                                            onResume={anime.hasFolder ? () => handleAnimeResume(anime) : undefined}
+                                            compact
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex-1 flex flex-col items-center justify-center text-white/30 border border-dashed border-white/5 rounded-xl bg-white/5">
+                                <p className="text-sm">No anime in list</p>
+                            </div>
                         )}
                     </div>
 
-                    {!userData && animeLoading ? (
-                        <div className="flex-1 flex items-center justify-center"><Loading inline /></div>
-                    ) : animeList.length > 0 ? (
-                        <>
-                            {/* Denser Grid for 'Smaller' look */}
-                            <div className="grid grid-cols-4 md:grid-cols-5 xl:grid-cols-4 gap-4">
-                                {animeList.slice(0, itemCount).map((anime: any) => (
-                                    <AnimeCard
-                                        key={anime.id}
-                                        anime={isAuthenticated ? {
-                                            id: anime.id,
-                                            title: anime.title,
-                                            coverImage: anime.coverImage,
-                                            episodes: anime.episodes,
-                                            format: anime.format,
-                                            averageScore: anime.averageScore
-                                        } : anime}
-                                        progress={isAuthenticated ? anime.progress : undefined}
-                                        onClick={() => handleAnimeClick(anime.id)}
-                                        onResume={anime.hasFolder ? () => handleAnimeResume(anime) : undefined}
+                    {/* Manga List Box */}
+                    {isAuthenticated && (
+                        <div className="bg-black/20 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg relative group h-fit">
+                            <div className="flex items-center justify-between mb-4 shrink-0 z-10 relative">
+                                <div className="flex items-center gap-4">
+                                    <h3 className="text-base font-bold flex items-center gap-2" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em', color: 'var(--color-text-main)' }}>
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] shadow-[0_0_8px_#38bdf8]"></div>
+                                        READING
+                                    </h3>
+                                    <RefreshButton
+                                        onClick={() => refetchManga()}
+                                        loading={mangaLoading}
+                                        title="Refresh"
+                                        iconSize={14}
                                     />
-                                ))}
-                            </div>
+                                </div>
 
-                            <div className="mt-auto pt-6 flex justify-center">
                                 <button
-                                    onClick={() => navigate('/anime-list?status=Watching')}
-                                    className="w-full py-3 rounded-xl transition-all text-sm font-bold tracking-wide hover:brightness-125"
+                                    onClick={() => navigate('/manga-list?status=Reading')}
+                                    className="text-xs font-bold tracking-wide hover:text-white transition-colors flex items-center gap-1 opacity-60 hover:opacity-100"
                                     style={{
-                                        background: 'rgba(255, 255, 255, 0.05)',
-                                        color: 'var(--color-zen-accent)',
-                                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                                        color: '#38bdf8',
                                         fontFamily: 'var(--font-rounded)',
                                     }}
                                 >
-                                    VIEW ALL
+                                    VIEW ALL <span className="text-[10px]">↗</span>
                                 </button>
                             </div>
-                        </>
-                    ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center py-10 text-white/30 border border-dashed border-white/5 rounded-xl bg-white/5">
-                            <p>No anime in list</p>
+
+                            {!mangaData && mangaLoading ? (
+                                <div className="flex-1 flex items-center justify-center"><Loading inline /></div>
+                            ) : mangaList.length > 0 ? (
+                                <div className="">
+                                    <div className="grid grid-cols-5 gap-3">
+                                        {mangaList.slice(0, 5).map((manga: any) => (
+                                            <AnimeCard
+                                                key={manga.id}
+                                                anime={{
+                                                    id: manga.id,
+                                                    title: manga.title,
+                                                    coverImage: manga.coverImage,
+                                                    episodes: manga.episodes,
+                                                    format: manga.format,
+                                                    averageScore: manga.averageScore
+                                                }}
+                                                progress={manga.progress}
+                                                onClick={() => handleMangaClick(manga.id)}
+                                                onResume={manga.hasMapping ? () => handleMangaResume(manga) : undefined}
+                                                isResuming={resumingMangaId === manga.id}
+                                                compact
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center text-white/30 border border-dashed border-white/5 rounded-xl bg-white/5">
+                                    <p className="text-sm">No manga in list</p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
 
-                {/* Manga Bento Box */}
+                {/* Stats Row - Bottom */}
                 {isAuthenticated && (
-                    <div className="bg-black/20 backdrop-blur-xl border border-white/5 rounded-3xl p-6 overflow-hidden flex flex-col h-full shadow-xl">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold flex items-center gap-3" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em', color: 'var(--color-text-main)' }}>
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] shadow-[0_0_8px_#38bdf8]"></div>
-                                READING
-                            </h3>
-                            <RefreshButton
-                                onClick={() => refetchManga()}
-                                loading={mangaLoading}
-                                title="Refresh List"
-                                iconSize={16}
-                            />
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 shrink-0">
+                        {/* Anime Stats */}
+                        <div className="bg-black/20 backdrop-blur-xl border border-white/5 rounded-2xl p-4 shadow-lg">
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-600/5 border border-emerald-500/10 dark:from-emerald-500/5 dark:to-teal-600/5 flex flex-col items-center justify-center text-center">
+                                    <div className="text-[10px] font-mono uppercase tracking-wider mb-1 text-emerald-500/80">Watch Time</div>
+                                    <div className="text-xl font-bold text-white leading-none">
+                                        {formatTime(stats?.anime.totalMinutesWatched || 0).replace('h', 'h ')}
+                                    </div>
+                                </div>
+                                <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex flex-col items-center justify-center text-center">
+                                    <div className="text-[10px] font-mono uppercase tracking-wider mb-1 text-white/40">Episodes</div>
+                                    <div className="text-xl font-bold text-white leading-none">{stats?.anime.episodesWatched || 0}</div>
+                                </div>
+                                <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex flex-col items-center justify-center text-center">
+                                    <div className="text-[10px] font-mono uppercase tracking-wider mb-1 text-white/40">Sessions</div>
+                                    <div className="text-xl font-bold text-white leading-none">{stats?.anime.sessionsCount || 0}</div>
+                                </div>
+                            </div>
                         </div>
 
-                        {!mangaData && mangaLoading ? (
-                            <div className="flex-1 flex items-center justify-center"><Loading inline /></div>
-                        ) : mangaList.length > 0 ? (
-                            <>
-                                {/* Denser Grid */}
-                                <div className="grid grid-cols-4 md:grid-cols-5 xl:grid-cols-4 gap-4">
-                                    {mangaList.slice(0, itemCount).map((manga: any) => (
-                                        <AnimeCard
-                                            key={manga.id}
-                                            anime={{
-                                                id: manga.id,
-                                                title: manga.title,
-                                                coverImage: manga.coverImage,
-                                                episodes: manga.episodes,
-                                                format: manga.format,
-                                                averageScore: manga.averageScore
-                                            }}
-                                            progress={manga.progress}
-                                            onClick={() => handleMangaClick(manga.id)}
-                                            onResume={manga.hasMapping ? () => handleMangaResume(manga) : undefined}
-                                            isResuming={resumingMangaId === manga.id}
-                                        />
-                                    ))}
+                        {/* Manga Stats */}
+                        <div className="bg-black/20 backdrop-blur-xl border border-white/5 rounded-2xl p-4 shadow-lg">
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="p-3 rounded-xl bg-gradient-to-br from-rose-500/10 to-pink-600/5 border border-rose-500/10 dark:from-rose-500/5 dark:to-pink-600/5 flex flex-col items-center justify-center text-center">
+                                    <div className="text-[10px] font-mono uppercase tracking-wider mb-1 text-rose-500/80">Read Time</div>
+                                    <div className="text-xl font-bold text-white leading-none">
+                                        {formatTime((stats?.manga.chaptersRead || 0) * 10).replace('h', 'h ')}
+                                    </div>
                                 </div>
-
-                                <div className="mt-auto pt-6 flex justify-center">
-                                    <button
-                                        onClick={() => navigate('/manga-list?status=Reading')}
-                                        className="w-full py-3 rounded-xl transition-all text-sm font-bold tracking-wide hover:brightness-125"
-                                        style={{
-                                            background: 'rgba(255, 255, 255, 0.05)',
-                                            color: '#38bdf8',
-                                            border: '1px solid rgba(255, 255, 255, 0.05)',
-                                            fontFamily: 'var(--font-rounded)',
-                                        }}
-                                    >
-                                        VIEW ALL
-                                    </button>
+                                <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex flex-col items-center justify-center text-center">
+                                    <div className="text-[10px] font-mono uppercase tracking-wider mb-1 text-white/40">Chapters</div>
+                                    <div className="text-xl font-bold text-white leading-none">{stats?.manga.chaptersRead || 0}</div>
                                 </div>
-                            </>
-                        ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center py-10 text-white/30 border border-dashed border-white/5 rounded-xl bg-white/5">
-                                <p>No manga in list</p>
+                                <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex flex-col items-center justify-center text-center">
+                                    <div className="text-[10px] font-mono uppercase tracking-wider mb-1 text-white/40">Sessions</div>
+                                    <div className="text-xl font-bold text-white leading-none">{stats?.manga.sessionsCount || 0}</div>
+                                </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 )}
             </div>
