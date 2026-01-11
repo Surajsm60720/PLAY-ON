@@ -74,6 +74,16 @@ With **v0.2.0**, PLAY-ON! expands into a full-featured entertainment hub with th
     npm run tauri dev
     ```
 
+### macOS Setup
+
+For **automatic anime tracking** to work on macOS (detecting what's playing in VLC, MPV, or browser-based players), you need to grant **Screen Recording** permission:
+
+1. Open **System Settings** → **Privacy & Security** → **Screen Recording**
+2. Click the **+** button and add **PLAY-ON!** to the list
+3. Restart the app for changes to take effect
+
+> ⚠️ Without this permission, the app cannot read window titles from other applications, and anime detection will not function.
+
 ## Technology Stack
 
 - **Frontend**: React 19, Vite, Apollo Client (GraphQL), TailwindCSS v4

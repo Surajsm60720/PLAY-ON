@@ -301,7 +301,7 @@ function Notifications() {
                                                             className="hover:underline cursor-pointer relative z-10"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                navigate(`/user/${notification.user.name}`);
+                                                                navigate(`/user/${notification.user?.name}`);
                                                             }}
                                                         >
                                                             {getNotificationTitle(notification)}
