@@ -7,7 +7,7 @@
  */
 
 import { AnimeSource, Anime, Episode, EpisodeSources, AnimeSearchResult, AnimeSearchFilter } from '../services/anime-sources/AnimeSource';
-
+// import { fetch } from '@tauri-apps/plugin-http'; // Unused
 
 const BASE_URL = 'https://vidsrc.to';
 
