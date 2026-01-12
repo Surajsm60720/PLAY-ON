@@ -35,7 +35,7 @@ const createTauriLoader = (headers: Record<string, string> = {}) => {
             };
         }
 
-        load(context: any, config: any, callbacks: any) {
+        load(context: any, _config: any, callbacks: any) {
             const { url } = context;
             const isPlaylist = url.includes('.m3u8') || context.type === 'manifest' || context.type === 'level';
 
