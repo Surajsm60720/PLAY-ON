@@ -34,12 +34,14 @@ function Sidebar({ width: _width }: SidebarProps) {
     const { unreadCount } = useAniListNotifications();
 
     // Navigation Sections
-    const homeItem: SidebarNavItem = { label: 'Home', path: '/home', icon: <HomeIcon size={20} /> };
+    const homeItem: SidebarNavItem[] = [
+        { label: 'Home', path: '/home', icon: <HomeIcon size={20} /> },
+        { label: 'Statistics', path: '/statistics', icon: <ChartIcon size={20} /> },];
+
 
     const animeSection: SidebarNavItem[] = [
         { label: 'Anime List', path: '/anime-list', icon: <FilmIcon size={20} /> },
         { label: 'Browse Anime', path: '/anime-browse', icon: <CompassIcon size={20} /> },
-        { label: 'Statistics', path: '/statistics', icon: <ChartIcon size={20} /> },
     ];
 
     const mangaSection: SidebarNavItem[] = [
@@ -106,7 +108,7 @@ function Sidebar({ width: _width }: SidebarProps) {
             }}>
                 {/* Home - Top Level */}
                 <div style={{ marginBottom: '0.5rem' }}>
-                    {renderLink(homeItem)}
+                    {homeItem.map(renderLink)}
                 </div>
 
                 {/* Anime Section */}
