@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Onboarding from './pages/Onboarding';
 import Home from './pages/Home';
 import AnimeList from './pages/AnimeList';
+import AnimeBrowse from './pages/AnimeBrowse';
 import MangaList from './pages/MangaList';
 import LocalMangaList from './pages/LocalMangaList';
 import MangaBrowse from './pages/MangaBrowse';
@@ -16,6 +17,7 @@ import AnimeDetails from './pages/AnimeDetails';
 import MangaDetails from './pages/MangaDetails';
 import CounterDemo from './pages/CounterDemo';
 import AnimeWatch from './pages/AnimeWatch';
+import AnimeSourceDetails from './pages/AnimeSourceDetails';
 import WebBrowser from './pages/WebBrowser';
 import MainLayout from './layouts/MainLayout';
 import { AuthProvider } from './context/AuthContext';
@@ -278,6 +280,7 @@ function App() {
                           <Route path="/home" element={<Home />} />
                           <Route path="/calendar" element={<Calendar />} />
                           <Route path="/anime-list" element={<AnimeList />} />
+                          <Route path="/anime-browse" element={<AnimeBrowse />} />
                           <Route path="/manga-list" element={<MangaList />} />
                           <Route path="/local-manga" element={<LocalMangaList />} />
                           <Route path="/history" element={<History />} />
@@ -297,6 +300,9 @@ function App() {
                           {/* Local Folder Route */}
                           <Route path="/local/:folderPath" element={<LocalFolder />} />
 
+                          {/* Anime Source Routes */}
+                          <Route path="/anime-source/:sourceId/:animeId" element={<AnimeSourceDetails />} />
+
                           {/* Manga Source Routes */}
                           <Route path="/manga-browse" element={<MangaBrowse />} />
                           <Route path="/manga/:sourceId/:mangaId" element={<MangaSourceDetails />} />
@@ -306,7 +312,6 @@ function App() {
                         <Route path="/watch/:sourceId/:episodeId" element={<AnimeWatch />} />
 
                         {/* Full-screen Web Browser for Anime (outside MainLayout) */}
-                        <Route path="/anime-browse" element={<WebBrowser />} />
                         <Route path="/browser" element={<WebBrowser />} />
                       </Routes>
                     </BrowserRouter>

@@ -10,9 +10,94 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import Hls from 'hls.js';
+import { invoke } from '@tauri-apps/api/core';
 import type { StreamingSource } from '../../services/streamingService';
 import { Dropdown } from './Dropdown'; // Import Dropdown (same folder)
 import './StreamPlayer.css';
+
+// Custom HLS Loader that proxies requests through Tauri
+const createTauriLoader = (headers: Record<string, string> = {}) => {
+    return class TauriLoader extends Hls.DefaultConfig.loader {
+        private _stats: any;
+
+        constructor(config: any) {
+            super(config);
+            this._stats = {
+                aborted: false,
+                loaded: 0,
+                retry: 0,
+                total: 0,
+                chunkCount: 0,
+                bwEstimate: 0,
+                loading: { start: 0, first: 0, end: 0 },
+                parsing: { start: 0, end: 0 },
+                buffering: { start: 0, first: 0, end: 0 },
+            };
+        }
+
+        load(context: any, config: any, callbacks: any) {
+            const { url } = context;
+            const isPlaylist = url.includes('.m3u8') || context.type === 'manifest' || context.type === 'level';
+
+            // Initialize stats timing
+            this._stats.loading.start = performance.now();
+
+            // Use Tauri proxy to fetch content
+            console.log(`[StreamProxy] Fetching: ${url.substring(0, 60)}... with headers:`, headers);
+            invoke<number[]>('stream_proxy', { url, headers })
+                .then((response) => {
+                    const now = performance.now();
+                    this._stats.loading.first = now;
+                    this._stats.loading.end = now;
+                    this._stats.loaded = response.length;
+                    this._stats.total = response.length;
+                    this._stats.parsing.start = now;
+                    this._stats.parsing.end = now;
+
+                    const uint8Array = new Uint8Array(response);
+
+                    // HLS.js expects string for playlists, ArrayBuffer for segments
+                    let data: string | ArrayBuffer;
+                    if (isPlaylist) {
+                        // Decode as UTF-8 string for playlist files
+                        data = new TextDecoder('utf-8').decode(uint8Array);
+                        // Debug: log what we received
+                        console.log(`[StreamProxy] Playlist response (${data.length} chars):`, data.substring(0, 300));
+                    } else {
+                        // Keep as ArrayBuffer for media segments
+                        data = uint8Array.buffer;
+                    }
+
+                    callbacks.onSuccess(
+                        {
+                            url,
+                            data,
+                        },
+                        this._stats,
+                        context,
+                        null // networkDetails
+                    );
+                })
+                .catch((error) => {
+                    console.error('[StreamProxy] Error:', error);
+                    callbacks.onError(
+                        { code: 404, text: error.toString() },
+                        context,
+                        null, // networkDetails
+                        this._stats
+                    );
+                });
+        }
+
+        abort() {
+            this._stats.aborted = true;
+        }
+
+        destroy() {
+            // Cleanup if needed
+        }
+    };
+};
 
 interface StreamPlayerProps {
     sources: StreamingSource[];
@@ -66,15 +151,12 @@ export default function StreamPlayer({
         }
 
         if (currentSource.isM3U8 && Hls.isSupported()) {
-            // Use HLS.js for HLS streams
+            console.log('[StreamPlayer] Initializing HLS with proxy');
+
+            // Use custom loader to bypass CORS
             const hls = new Hls({
-                xhrSetup: (xhr: XMLHttpRequest) => {
-                    if (headers) {
-                        Object.entries(headers).forEach(([key, value]) => {
-                            xhr.setRequestHeader(key, value);
-                        });
-                    }
-                },
+                loader: createTauriLoader(headers),
+                debug: false,
             });
 
             hls.loadSource(currentSource.url);
@@ -88,11 +170,12 @@ export default function StreamPlayer({
                 video.play().catch(console.error);
             });
 
-            hls.on(Hls.Events.ERROR, (_event: string, data: { fatal: boolean }) => {
+            hls.on(Hls.Events.ERROR, (_event, data) => {
                 if (data.fatal) {
                     console.error('[StreamPlayer] HLS error:', data);
                     setError('Failed to load video stream');
                     setIsLoading(false);
+                    hls.destroy();
                 }
             });
 

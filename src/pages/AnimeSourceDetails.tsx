@@ -92,7 +92,7 @@ function AnimeSourceDetails() {
             <div className="anime-source-details-error">
                 <h2>Error</h2>
                 <p>{error || 'Anime not found'}</p>
-                <button onClick={() => navigate(-1)}>Go Back</button>
+                <button onClick={() => navigate('/anime-browse')}>Back to Browse</button>
             </div>
         );
     }

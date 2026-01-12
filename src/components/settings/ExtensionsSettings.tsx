@@ -42,7 +42,7 @@ export default function ExtensionsSettings() {
     const [typeFilter, setTypeFilter] = useState<ExtensionTypeFilter>('all');
     const [repos, setRepos] = useState<ExtensionRepo[]>([]);
     const [installedExtensions, setInstalledExtensions] = useState<InstalledExtension[]>([]);
-    const [installedAnimeExtensions, setInstalledAnimeExtensions] = useState<ReturnType<typeof AnimeExtensionStorage.getAllExtensions>>([]);
+    const [installedAnimeExtensions, setInstalledAnimeExtensions] = useState<any[]>([]);
     const [availableExtensions, setAvailableExtensions] = useState<{ repoUrl: string; repoName: string; extensions: ExtensionMeta[] }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -54,13 +54,20 @@ export default function ExtensionsSettings() {
 
     // Load data on mount
     useEffect(() => {
-        loadData();
+        const init = async () => {
+            if (!AnimeExtensionManager.isInitialized()) {
+                await AnimeExtensionManager.initialize();
+            }
+            loadData();
+        };
+        init();
     }, []);
 
     const loadData = useCallback(() => {
         setRepos(ExtensionRepository.getRepos());
         setInstalledExtensions(ExtensionStorage.getAllExtensions());
-        setInstalledAnimeExtensions(AnimeExtensionStorage.getAllExtensions());
+        // Use Manager to get ALL sources including built-ins
+        setInstalledAnimeExtensions(AnimeExtensionManager.getAllSources());
     }, []);
 
     // Fetch available extensions from all repos
@@ -155,6 +162,12 @@ export default function ExtensionsSettings() {
 
     // Toggle extension enabled state (handles both manga and anime)
     const handleToggleExtension = async (id: string, type?: 'manga' | 'anime') => {
+        // Built-in HiAnime extension override - cannot be disabled for now
+        if (id === 'hianime') {
+            alert('Built-in extensions cannot be disabled.');
+            return;
+        }
+
         if (type === 'anime') {
             AnimeExtensionStorage.toggleExtension(id);
             await AnimeExtensionManager.reload();
@@ -176,7 +189,14 @@ export default function ExtensionsSettings() {
     // Get combined installed extensions for display
     const allInstalledExtensions = [
         ...installedExtensions.map(e => ({ ...e, type: (e.type || 'manga') as 'manga' | 'anime' })),
-        ...installedAnimeExtensions.map(e => ({ ...e, type: 'anime' as const }))
+        ...installedAnimeExtensions.map(e => ({
+            ...e,
+            type: 'anime' as const,
+            // Ensure built-in props exist
+            version: e.version || '1.0.0',
+            enabled: e.enabled !== undefined ? e.enabled : true,
+            lang: e.lang || 'en'
+        }))
     ];
 
     // Filter installed extensions by type
@@ -322,7 +342,7 @@ export default function ExtensionsSettings() {
                                                     ⚠ Failed to load: {ExtensionLoader.getLoadError(ext.id) || 'Unknown error'}
                                                 </div>
                                             )}
-                                            {ext.enabled && ext.type === 'anime' && !AnimeLoader.isLoaded(ext.id) && (
+                                            {ext.enabled && ext.type === 'anime' && ext.id !== 'hianime' && ext.id !== 'gogoanime' && ext.id !== 'animepahe' && !AnimeLoader.isLoaded(ext.id) && (
                                                 <div style={{
                                                     color: '#ff6464',
                                                     marginTop: 4,

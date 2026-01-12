@@ -77,9 +77,21 @@ function AnimeWatch() {
         if (animeId && sourceId) {
             navigate(`/anime-source/${sourceId}/${encodeURIComponent(animeId)}`);
         } else {
-            navigate(-1);
+            // If we don't have context, go back to browse or history
+            navigate('/anime-browse');
         }
     };
+
+    // Escape key to go back
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                handleBack();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [animeId, sourceId]);
 
     const handleEnded = () => {
         // Could auto-play next episode here
@@ -100,7 +112,17 @@ function AnimeWatch() {
             <div className="anime-watch error">
                 <h2>Error Loading Video</h2>
                 <p>{error}</p>
-                <button onClick={handleBack}>Go Back</button>
+                <div className="error-actions">
+                    <button onClick={handleBack}>Go Back</button>
+                    {sourceId === 'hianime' && animeId && episodeId && (
+                        <button
+                            className="primary"
+                            onClick={() => window.open(`https://hianime.to/watch/${animeId}?ep=${episodeId}`, '_blank')}
+                        >
+                            Watch on HiAnime
+                        </button>
+                    )}
+                </div>
             </div>
         );
     }

@@ -27,9 +27,11 @@ function AnimeBrowse() {
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
     // Tab mode: 'extensions' or 'browser'
-    const [activeTab, setActiveTab] = useState<'extensions' | 'browser'>('browser');
+    // Default to 'extensions' to prioritize custom player
+    const [activeTab, setActiveTab] = useState<'extensions' | 'browser'>('extensions');
 
     // Extension browsing state
+    const [sources, setSources] = useState<any[]>(() => AnimeExtensionManager.getAllSources());
     const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<Anime[]>([]);
@@ -43,23 +45,31 @@ function AnimeBrowse() {
     const [isLoading, setIsLoading] = useState(false);
     const [showPresets, setShowPresets] = useState(true);
 
-    // Get all available anime sources
-    const sources = useMemo(() => {
-        return AnimeExtensionManager.getAllSources();
-    }, []);
+    // Refresh sources when component mounts (extensions may have been installed)
+    useEffect(() => {
+        const refreshSources = () => {
+            const newSources = AnimeExtensionManager.getAllSources();
+            setSources(newSources);
 
-    // Get selected source
+            // Auto-select first source if none selected
+            if (!selectedSourceId && newSources.length > 0) {
+                setSelectedSourceId(newSources[0].id);
+            }
+        };
+
+        // Initial load
+        refreshSources();
+
+        // Set up a listener for extension changes (polling for now)
+        const interval = setInterval(refreshSources, 2000);
+        return () => clearInterval(interval);
+    }, [selectedSourceId]);
+
+    // Get selected source object
     const selectedSource = useMemo(() => {
         if (!selectedSourceId) return null;
         return AnimeExtensionManager.getSource(selectedSourceId) || null;
-    }, [selectedSourceId]);
-
-    // Auto-select first source if none selected
-    useEffect(() => {
-        if (!selectedSourceId && sources.length > 0) {
-            setSelectedSourceId(sources[0].id);
-        }
-    }, [sources, selectedSourceId]);
+    }, [selectedSourceId, sources]);
 
     // Handle search
     const handleSearch = async () => {
@@ -144,17 +154,17 @@ function AnimeBrowse() {
                 <>
                     {sources.length === 0 ? (
                         <div className="anime-browse-empty">
-                            <div className="empty-icon">📺</div>
-                            <h2>No Anime Sources Installed</h2>
-                            <p>Install anime extensions from Settings → Extensions to use this feature.</p>
+                            <div className="empty-icon">🔌</div>
+                            <h2>No Anime Extensions Active</h2>
+                            <p>Loading extensions... or none are installed.</p>
                             <p style={{ color: 'var(--color-text-muted)', marginTop: '8px' }}>
-                                Or use the Web Browser tab to watch directly from streaming sites.
+                                Go to Settings to manage extensions.
                             </p>
                             <button
                                 className="primary-btn"
                                 onClick={() => navigate('/settings')}
                             >
-                                Go to Settings
+                                Manage Extensions
                             </button>
                         </div>
                     ) : (

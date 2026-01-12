@@ -715,6 +715,24 @@ async fn open_browser_window(
     Ok(format!("Opened {} in new window", title))
 }
 
+/// Proxy video stream requests to bypass CORS and inject headers
+#[tauri::command]
+async fn stream_proxy(
+    url: String,
+    headers: std::collections::HashMap<String, String>,
+) -> Result<Vec<u8>, String> {
+    let client = reqwest::Client::new();
+    let mut request = client.get(&url);
+
+    for (key, value) in headers {
+        request = request.header(&key, &value);
+    }
+
+    let response = request.send().await.map_err(|e| e.to_string())?;
+    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
+    Ok(bytes.to_vec())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -779,7 +797,9 @@ pub fn run() {
             mal_get_anime_list,
             mal_get_manga_list,
             // Browser window command
-            open_browser_window
+            open_browser_window,
+            // Stream proxy
+            stream_proxy
         ])
         .setup(|app| {
             // Register deep links at runtime for development mode (Windows/Linux)
