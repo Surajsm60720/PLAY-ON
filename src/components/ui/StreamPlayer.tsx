@@ -525,15 +525,7 @@ export default function StreamPlayer({
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
-    if (error) {
-        return (
-            <div className="stream-player error">
-                <p>{error}</p>
-            </div>
-        );
-    }
-
-    // Keyboard shortcuts
+    // Keyboard shortcuts - MUST be before any early returns to follow React hooks rules
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             // Ignore if typing in an input or textarea
@@ -631,6 +623,16 @@ export default function StreamPlayer({
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [togglePlay, toggleMute, toggleFullscreen, hasNextEpisode, onNext, hasPrevEpisode, onPrev, handleSubtitleChange, subtitles.length, selectedSubtitle]);
+
+    // Error state - AFTER all hooks
+    if (error) {
+        return (
+            <div className="stream-player error">
+                <p>{error}</p>
+            </div>
+        );
+    }
+
     return (
         <div
             ref={containerRef}

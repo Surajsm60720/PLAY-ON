@@ -6,16 +6,13 @@
  * Manages all available anime sources.
  * Think of this as the "plugin registry" for anime in the app.
  * 
- * Supports dynamic extension loading from external repositories.
+ * All extensions are now loaded dynamically from external repositories.
+ * No built-in extensions are bundled with the app for legal separation.
  * ====================================================================
  */
 
 import { AnimeSource } from './anime-sources/AnimeSource';
 import { AnimeLoader } from './anime-extensions/AnimeLoader';
-import { HiAnimeExtension } from '../extensions/hianime';
-
-import { GogoAnimeExtension } from '../extensions/gogoanime';
-import { AnimePaheExtension } from '../extensions/animepahe';
 
 class AnimeExtensionManagerClass {
     private sources: Map<string, AnimeSource> = new Map();
@@ -29,12 +26,7 @@ class AnimeExtensionManagerClass {
 
         console.log('[AnimeExtensionManager] Initializing...');
 
-        // Register built-in extensions
-        this.registerSource(HiAnimeExtension);
-        this.registerSource(GogoAnimeExtension);
-        this.registerSource(AnimePaheExtension);
-
-        // Initialize the loader (loads extensions from storage)
+        // Initialize the loader (loads extensions from storage/remote repos)
         await AnimeLoader.initialize();
 
         // Register all loaded extensions
@@ -76,9 +68,7 @@ class AnimeExtensionManagerClass {
         this.sources.clear();
         this.initialized = false;
 
-        // Re-register built-in extensions
-        this.registerSource(HiAnimeExtension);
-
+        // Reload extensions from remote repositories
         await AnimeLoader.reload();
 
         const extensions = AnimeLoader.getExtensions();
