@@ -14,7 +14,7 @@ import { ExtensionMeta, RepositoryIndex, ExtensionRepo } from './types';
 const REPOS_STORAGE_KEY = 'extension-repos';
 
 // Default repository - automatically added on first launch
-const DEFAULT_REPO_URL = 'https://raw.githubusercontent.com/MemestaVedas/PLAY-ON/main/public/extensions';
+const DEFAULT_REPO_URL = 'https://raw.githubusercontent.com/MemestaVedas/extensions/main/Manga';
 
 class ExtensionRepositoryService {
     private repos: ExtensionRepo[] = [];
