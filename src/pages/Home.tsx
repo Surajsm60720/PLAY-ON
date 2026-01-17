@@ -148,9 +148,9 @@ function Home() {
             .slice(0, 6);
     }, [isAuthenticated, animeList, planningData]);
 
-    const handleAnimeClick = (id: number) => {
+    const handleAnimeClick = useCallback((id: number) => {
         navigateWithTransition(`/anime/${id}`);
-    };
+    }, [navigateWithTransition]);
 
     // Resume button handler for anime with linked folders
     const handleAnimeResume = useCallback((anime: any) => {
@@ -160,9 +160,9 @@ function Home() {
         }
     }, [navigate]);
 
-    const handleMangaClick = (id: number) => {
+    const handleMangaClick = useCallback((id: number) => {
         navigateWithTransition(`/manga-details/${id}`);
-    };
+    }, [navigateWithTransition]);
 
     const handleMangaResume = useCallback(async (manga: any) => {
         if (manga.sourceId && manga.sourceMangaId) {
@@ -301,7 +301,7 @@ function Home() {
                                                     averageScore: anime.averageScore
                                                 } : anime}
                                                 progress={isAuthenticated ? anime.progress : undefined}
-                                                onClick={() => handleAnimeClick(anime.id)}
+                                                onClick={handleAnimeClick}
                                                 onResume={anime.hasFolder ? () => handleAnimeResume(anime) : undefined}
                                             />
                                         </div>
@@ -362,7 +362,7 @@ function Home() {
                                                         averageScore: manga.averageScore
                                                     }}
                                                     progress={manga.progress}
-                                                    onClick={() => handleMangaClick(manga.id)}
+                                                    onClick={handleMangaClick}
                                                     onResume={manga.hasMapping ? () => handleMangaResume(manga) : undefined}
                                                     isResuming={resumingMangaId === manga.id}
                                                 />

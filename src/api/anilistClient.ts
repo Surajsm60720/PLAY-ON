@@ -442,6 +442,26 @@ query ($id: Int) {
       day
     }
     genres
+    relations {
+      edges {
+        relationType(version: 2)
+        node {
+          id
+          title {
+            romaji
+            english
+            native
+          }
+          format
+          type
+          status
+          coverImage {
+            large
+            medium
+          }
+        }
+      }
+    }
     staff(perPage: 3) {
       nodes {
         name {
@@ -512,6 +532,26 @@ query ($id: Int) {
     seasonYear
     season
     genres
+    relations {
+      edges {
+        relationType(version: 2)
+        node {
+          id
+          title {
+            romaji
+            english
+            native
+          }
+          format
+          type
+          status
+          coverImage {
+            large
+            medium
+          }
+        }
+      }
+    }
     studios(isMain: true) {
       nodes {
         name
@@ -613,10 +653,11 @@ query {
 // ============================================================================
 
 const UPDATE_MEDIA_PROGRESS_MUTATION = gql`
-mutation UpdateMediaProgress($mediaId: Int, $progress: Int, $status: MediaListStatus) {
-  SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status) {
+mutation UpdateMediaProgress($mediaId: Int, $progress: Int, $status: MediaListStatus, $score: Int) {
+  SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status, scoreRaw: $score) {
     id
     progress
+    score(format: POINT_100)
     status
     media {
       id
@@ -835,6 +876,7 @@ const executeUpdateMediaProgress = async (variables: any) => {
         id: -1,
         progress: variables.progress,
         status: variables.status || "CURRENT",
+        score: variables.score || 0,
         media: {
           __typename: "Media",
           id: variables.mediaId,
@@ -851,11 +893,17 @@ const executeUpdateMediaProgress = async (variables: any) => {
 // Register for offline queue processing
 registerMutationProcessor('UpdateMediaProgress', executeUpdateMediaProgress);
 
+
+
 /**
  * Updates anime progress. Supports offline queuing.
  */
-export async function updateMediaProgress(mediaId: number, progress: number, status?: string) {
-  const variables = { mediaId, progress, status };
+export async function updateMediaProgress(mediaId: number, progress?: number, status?: string, score?: number) {
+  const variables: any = { mediaId };
+  if (progress !== undefined) variables.progress = progress;
+  if (status !== undefined) variables.status = status;
+  if (score !== undefined) variables.score = score;
+
   try {
     return await executeUpdateMediaProgress(variables);
   } catch (err) {
@@ -866,8 +914,10 @@ export async function updateMediaProgress(mediaId: number, progress: number, sta
       return {
         data: {
           SaveMediaListEntry: {
-            progress,
-            status
+            progress: progress || 0,
+            status: status || 'CURRENT',
+            score: score || 0,
+            media: { id: mediaId, title: { english: 'Offline Update' } }
           }
         }
       };
@@ -1243,8 +1293,15 @@ export async function markNotificationsAsRead(): Promise<void> {
     }
   `;
 
-  await apolloClient.query({
-    query: RESET_QUERY,
-    fetchPolicy: 'network-only'
-  });
+  try {
+    await apolloClient.query({
+      query: RESET_QUERY,
+      fetchPolicy: 'network-only'
+    });
+  } catch (error) {
+    console.warn("Failed to reset notifications:", error);
+    // Suppress error to avoid crashing the UI
+  }
 }
+
+

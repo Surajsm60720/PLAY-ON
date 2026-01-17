@@ -162,4 +162,5 @@ const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress, onResum
     );
 };
 
-export default AnimeCard;
+const MemoizedAnimeCard = React.memo(AnimeCard);
+export default MemoizedAnimeCard;

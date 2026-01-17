@@ -11,6 +11,8 @@ import Loading from '../components/ui/Loading';
 import { AnimeStats } from '../components/anime/AnimeStats';
 import { AnimeProgressCard } from '../components/anime/AnimeProgressCard';
 import { AnimeResumeButton } from '../components/anime/AnimeResumeButton';
+import { MediaRelations } from '../components/media/MediaRelations';
+import { ReadMoreText } from '../components/ui/ReadMoreText';
 import { StatusDropdown } from '../components/ui/StatusDropdown';
 import { PlayIcon, CheckIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon, HeartIcon } from '../components/ui/Icons';
 import { motion } from 'framer-motion';
@@ -49,18 +51,18 @@ function AnimeDetails() {
     const [isFavorite, setIsFavorite] = useState(false);
     const [favoriteUpdating, setFavoriteUpdating] = useState(false);
 
-    // Dynamic theme - use blurred cover art as ambient background
-    const coverImageUrl = anime?.coverImage?.extraLarge || anime?.coverImage?.large;
+    // Dynamic theme - use blurred banner as ambient background (fallback to cover)
+    const bgImage = anime?.bannerImage || anime?.coverImage?.extraLarge || anime?.coverImage?.large;
     const { setCoverImage, clearTheme } = useDynamicTheme();
 
-    // Set cover image for dynamic theming when anime loads
+    // Set background image for dynamic theming when anime loads
     useEffect(() => {
-        if (coverImageUrl) {
-            setCoverImage(coverImageUrl);
+        if (bgImage) {
+            setCoverImage(bgImage);
         }
         // Clear when leaving the page
         return () => clearTheme();
-    }, [coverImageUrl, setCoverImage, clearTheme]);
+    }, [bgImage, setCoverImage, clearTheme]);
 
     // Check if this anime is linked to a local folder
     const folderMapping = anime ? getMappingByAnilistId(anime.id) : undefined;
@@ -258,7 +260,7 @@ function AnimeDetails() {
 
                         {/* Title Block */}
                         <div>
-                            <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-none mb-4 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
+                            <h1 className="text-2xl md:text-4xl font-black tracking-tight leading-none mb-3 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
                                 {title}
                             </h1>
                             <div className="flex flex-wrap gap-2 text-sm text-white/60 font-mono">
@@ -285,33 +287,43 @@ function AnimeDetails() {
                 </div>
 
                 {/* Full Width Content Below */}
-                <div className="flex flex-col gap-8">
+                {/* Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
-                    {/* Description Box */}
-                    <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lavender-mist via-sky-blue to-transparent opacity-50 rounded-t-2xl" />
-                        <div
-                            className="text-base leading-relaxed text-gray-200/90 font-light pr-4"
-                            dangerouslySetInnerHTML={{ __html: anime.description || 'No data available.' }}
+                    {/* Left Column: Description */}
+                    <div className="lg:col-span-3 relative p-5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner h-fit">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lavender-mist via-sky-blue to-transparent opacity-50 rounded-t-xl" />
+                        <h3 className="text-xs font-mono text-lavender-mist uppercase tracking-widest mb-3">Synopsis</h3>
+                        <ReadMoreText
+                            content={anime.description || 'No data available.'}
+                            maxHeight={200}
                         />
                     </div>
 
-                    {/* Resume Button (Separated Action) */}
-                    {folderMapping && (
-                        <AnimeResumeButton
-                            onClick={() => navigate(`/local/${encodeURIComponent(folderMapping.folderPath)}`)}
-                            folderPath={folderMapping.folderPath}
+                    {/* Right Column: Progress & Actions */}
+                    <div className="lg:col-span-2 flex flex-col gap-4">
+                        {/* Resume Button */}
+                        {folderMapping && (
+                            <AnimeResumeButton
+                                onClick={() => navigate(`/local/${encodeURIComponent(folderMapping.folderPath)}`)}
+                                folderPath={folderMapping.folderPath}
+                            />
+                        )}
+
+                        {/* Progress Control */}
+                        <AnimeProgressCard
+                            anime={anime}
+                            progress={progress}
+                            onUpdate={handleProgressUpdate}
+                            updating={updating}
                         />
-                    )}
+                    </div>
 
-                    {/* Progress Control */}
-                    <AnimeProgressCard
-                        anime={anime}
-                        progress={progress}
-                        onUpdate={handleProgressUpdate}
-                        updating={updating}
-                    />
+                </div>
 
+                {/* Relations Section */}
+                <div className="-mt-8">
+                    <MediaRelations relations={anime.relations} />
                 </div>
 
                 {/* Related Anime Section */}
@@ -334,7 +346,7 @@ function AnimeDetails() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }
 

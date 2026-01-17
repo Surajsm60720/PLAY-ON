@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, forwardRef, useRef } from 'react';
+import { useState, useEffect, useMemo, forwardRef, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
 import AnimeCard from '../components/ui/AnimeCard';
@@ -126,9 +126,9 @@ function AnimeList() {
 
     const error = queryError ? "Failed to fetch anime list." : null;
 
-    const handleAnimeClick = (id: number) => {
+    const handleAnimeClick = useCallback((id: number) => {
         navigate(`/anime/${id}`);
-    };
+    }, [navigate]);
 
 
 
@@ -386,7 +386,7 @@ function AnimeList() {
                                     episodes: entry.media.episodes // Ensure episodes is passed
                                 } as any}
                                 progress={entry.progress}
-                                onClick={() => handleAnimeClick(entry.media.id)}
+                                onClick={handleAnimeClick}
                             />
                         )}
                     />
