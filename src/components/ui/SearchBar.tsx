@@ -108,7 +108,7 @@ const SearchBar: React.FC = () => {
     return (
         <div ref={containerRef} className="relative group/search">
             <div
-                className="glass-panel pl-2 pr-4 py-2 flex items-center gap-3 rounded-full border border-white/5 backdrop-blur-md transition-all duration-300 ease-out hover:border-white/20 hover:bg-white/[0.07] focus-within:border-white/30 focus-within:bg-white/10 focus-within:ring-1 focus-within:ring-white/10"
+                className="glass-panel pl-2 pr-4 py-2 flex items-center gap-3 rounded-full border border-white/5 backdrop-blur-md transition-all duration-300 ease-out hover:border-white/20 hover:bg-white/[0.07] focus-within:border-white/30 focus-within:bg-white/10"
                 style={{
                     background: 'var(--color-bg-glass)',
                     borderColor: 'var(--color-border-subtle)',
@@ -178,10 +178,13 @@ const SearchBar: React.FC = () => {
                     onChange={handleSearch}
                     onKeyDown={handleKeyDown}
                     onFocus={() => results.length > 0 && setShowDropdown(true)}
-                    className="bg-transparent border-none outline-none text-sm w-48 font-medium"
+                    className="bg-transparent border-none text-sm w-48 font-medium"
                     style={{
                         fontFamily: 'var(--font-rounded)',
                         color: 'var(--color-text-main)',
+                        outline: 'none',
+                        boxShadow: 'none',
+                        WebkitAppearance: 'none',
                     }}
                 />
                 {isLoading && (

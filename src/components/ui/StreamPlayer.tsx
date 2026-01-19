@@ -13,6 +13,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 import { invoke } from '@tauri-apps/api/core';
 import type { StreamingSource } from '../../services/streamingService';
+import { SkipTime } from '../../services/skipTimes';
 import './StreamPlayer.css';
 
 // Subtitle type
@@ -113,7 +114,9 @@ interface StreamPlayerProps {
     onPrev?: () => void;
     hasPrevEpisode?: boolean;
     startTime?: number;
+
     headers?: Record<string, string>;
+    skipTimes?: SkipTime[];
 }
 
 // Quality level from HLS.js
@@ -135,7 +138,9 @@ export default function StreamPlayer({
     onPrev,
     hasPrevEpisode,
     startTime = 0,
+
     headers,
+    skipTimes = [],
 }: StreamPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
@@ -145,6 +150,15 @@ export default function StreamPlayer({
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
+    const [activeSkip, setActiveSkip] = useState<SkipTime | null>(null);
+
+    // Autoplay State
+    const [showAutoplayOverlay, setShowAutoplayOverlay] = useState(false);
+    const [autoplayTimer, setAutoplayTimer] = useState(5);
+    const [isAutoplayEnabled] = useState(() => {
+        return localStorage.getItem('player_autoplay') !== 'false'; // Default true
+    });
+    const autoplayIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Persisted State
     const [volume, setVolume] = useState(() => {
@@ -351,13 +365,59 @@ export default function StreamPlayer({
                     const progress = (video.currentTime / video.duration) * 100;
                     onProgress(progress, video.currentTime, video.duration);
                 }
+
+                // Check for skip intervals
+                const currentSkip = skipTimes.find(skip =>
+                    video.currentTime >= skip.interval.startTime &&
+                    video.currentTime < skip.interval.endTime
+                );
+                setActiveSkip(currentSkip || null);
             }
         }, 1000);
 
         return () => {
             if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
         };
-    }, [onProgress]);
+    }, [onProgress, skipTimes]);
+
+    // Autoplay Logic
+    const handleEnded = useCallback(() => {
+        setIsPlaying(false);
+        setShowControls(true);
+        if (onEnded) onEnded();
+
+        if (hasNextEpisode && isAutoplayEnabled && onNext) {
+            setShowAutoplayOverlay(true);
+            setAutoplayTimer(5);
+
+            // Start Countdown
+            if (autoplayIntervalRef.current) clearInterval(autoplayIntervalRef.current);
+            autoplayIntervalRef.current = setInterval(() => {
+                setAutoplayTimer((prev) => {
+                    if (prev <= 1) {
+                        if (autoplayIntervalRef.current) clearInterval(autoplayIntervalRef.current);
+                        onNext();
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+    }, [onEnded, hasNextEpisode, isAutoplayEnabled, onNext]);
+
+    // Clean up autoplay timer on unmount
+    useEffect(() => {
+        return () => {
+            if (autoplayIntervalRef.current) clearInterval(autoplayIntervalRef.current);
+        };
+    }, []);
+
+    // Reset autoplay state on source change
+    useEffect(() => {
+        setShowAutoplayOverlay(false);
+        setAutoplayTimer(5);
+        if (autoplayIntervalRef.current) clearInterval(autoplayIntervalRef.current);
+    }, [sources]);
 
     // Enhanced Auto-hide controls
     useEffect(() => {
@@ -486,11 +546,7 @@ export default function StreamPlayer({
 
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
-        const handleEnded = () => {
-            setIsPlaying(false);
-            setShowControls(true);
-            onEnded?.();
-        };
+        // defined above via useCallback: handleEnded
         const handleError = () => {
             setError('Video playback error');
             setIsLoading(false);
@@ -507,7 +563,7 @@ export default function StreamPlayer({
             video.removeEventListener('ended', handleEnded);
             video.removeEventListener('error', handleError);
         };
-    }, [onEnded]);
+    }, [onEnded, handleEnded]);
 
     useEffect(() => {
         const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -559,12 +615,12 @@ export default function StreamPlayer({
                     e.preventDefault();
                     const newVolUp = Math.min(1, video.volume + 0.1);
                     video.volume = newVolUp;
+                    video.volume = newVolUp;
                     setVolume(newVolUp);
                     setIsMuted(newVolUp === 0);
                     localStorage.setItem('player_volume', newVolUp.toString());
                     break;
                 case 'arrowdown':
-                case 's':
                     e.preventDefault();
                     const newVolDown = Math.max(0, video.volume - 0.1);
                     video.volume = newVolDown;
@@ -580,6 +636,26 @@ export default function StreamPlayer({
                     e.preventDefault();
                     toggleFullscreen();
                     break;
+                case 's':
+                    if (e.shiftKey && activeSkip) {
+                        e.preventDefault();
+                        const video = videoRef.current;
+                        if (video) {
+                            video.currentTime = activeSkip.interval.endTime;
+                            setCurrentTime(activeSkip.interval.endTime);
+                            setActiveSkip(null);
+                        }
+                    } else {
+                        // Volume Down
+                        e.preventDefault();
+                        const newVolDown = Math.max(0, video.volume - 0.1);
+                        video.volume = newVolDown;
+                        setVolume(newVolDown);
+                        setIsMuted(newVolDown === 0);
+                        localStorage.setItem('player_volume', newVolDown.toString());
+                    }
+                    break;
+
                 case '.':
                     // Next frame (approx 1/24s)
                     e.preventDefault();
@@ -596,7 +672,7 @@ export default function StreamPlayer({
                         setCurrentTime(video.currentTime);
                     }
                     break;
-                case 'c':
+                case 'c': // Existing 's' is used for volume down, 'S' could be skip?
                     e.preventDefault();
                     // Toggle captions: If -1 (off), set to 0 (first). If >= 0, set to -1.
                     const newSub = selectedSubtitle === -1 ? 0 : -1;
@@ -622,7 +698,7 @@ export default function StreamPlayer({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [togglePlay, toggleMute, toggleFullscreen, hasNextEpisode, onNext, hasPrevEpisode, onPrev, handleSubtitleChange, subtitles.length, selectedSubtitle]);
+    }, [togglePlay, toggleMute, toggleFullscreen, hasNextEpisode, onNext, hasPrevEpisode, onPrev, handleSubtitleChange, subtitles.length, selectedSubtitle, activeSkip]);
 
     // Error state - AFTER all hooks
     if (error) {
@@ -646,6 +722,68 @@ export default function StreamPlayer({
                 crossOrigin="anonymous"
                 onDoubleClick={toggleFullscreen}
             />
+
+            {/* Autoplay Overlay */}
+            {showAutoplayOverlay && (
+                <div className="autoplay-overlay">
+                    <div className="autoplay-content">
+                        <h3>Next Episode</h3>
+                        <div className="autoplay-timer">
+                            <svg width="60" height="60" viewBox="0 0 60 60">
+                                <circle cx="30" cy="30" r="28" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="4" />
+                                <circle cx="30" cy="30" r="28" fill="none" stroke="var(--color-zen-accent, #B4A2F6)" strokeWidth="4"
+                                    strokeDasharray="176"
+                                    strokeDashoffset={176 - (176 * autoplayTimer / 5)}
+                                    transform="rotate(-90 30 30)"
+                                    style={{ transition: 'stroke-dashoffset 1s linear' }}
+                                />
+                                <text x="50%" y="50%" textAnchor="middle" dy=".3em" fill="#fff" fontSize="20px" fontWeight="bold">
+                                    {autoplayTimer}
+                                </text>
+                            </svg>
+                        </div>
+                        <div className="autoplay-actions">
+                            <button
+                                className="autoplay-btn cancel"
+                                onClick={() => {
+                                    setShowAutoplayOverlay(false);
+                                    if (autoplayIntervalRef.current) clearInterval(autoplayIntervalRef.current);
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="autoplay-btn play-now"
+                                onClick={() => {
+                                    if (onNext) onNext();
+                                }}
+                            >
+                                Play Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Skip Button Overlay */}
+            {activeSkip && (
+                <button
+                    className="skip-button"
+                    onClick={() => {
+                        const video = videoRef.current;
+                        if (video) {
+                            video.currentTime = activeSkip.interval.endTime;
+                            setCurrentTime(activeSkip.interval.endTime);
+                            setActiveSkip(null); // Hide immediately
+                        }
+                    }}
+                >
+                    Skip {activeSkip.skipType === 'op' ? 'Intro' : 'Outro'}
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                        <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                    </svg>
+                </button>
+            )}
 
             {
                 isLoading && (

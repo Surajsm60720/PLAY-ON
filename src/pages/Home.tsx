@@ -4,7 +4,7 @@ import AnimeCard from '../components/ui/AnimeCard';
 import RefreshButton from '../components/ui/RefreshButton';
 import { useAuth } from '../hooks/useAuth';
 import { useQuery } from '@apollo/client';
-import { USER_MANGA_LIST_QUERY, TRENDING_ANIME_QUERY, USER_STATUS_ANIME_COLLECTION_QUERY } from '../api/anilistClient';
+import { USER_MANGA_LIST_QUERY, TRENDING_ANIME_QUERY, USER_STATUS_ANIME_COLLECTION_QUERY, GENRE_RECOMMENDATIONS_QUERY, USER_STATS_QUERY, USER_ANIME_COLLECTION_QUERY, MANGA_GENRE_RECOMMENDATIONS_QUERY, USER_MANGA_COLLECTION_QUERY } from '../api/anilistClient';
 import { useMangaMappings } from '../hooks/useMangaMappings';
 import { useFolderMappings } from '../hooks/useFolderMappings';
 import { getMangaEntryByAnilistId, updateMangaCache } from '../lib/localMangaDb';
@@ -55,6 +55,60 @@ function Home() {
     const { data: trendingData, loading: trendingLoading } = useQuery(TRENDING_ANIME_QUERY, {
         variables: { page: 1, perPage: 12 },
         skip: isAuthenticated,
+        fetchPolicy: 'cache-and-network'
+    });
+
+    // Fetch user's genre statistics for smart recommendations
+    const { data: userStatsData } = useQuery(USER_STATS_QUERY, {
+        variables: { userId: user?.id },
+        skip: !isAuthenticated || !user?.id,
+        fetchPolicy: 'cache-and-network'
+    });
+
+    // Fetch user's FULL anime list (all statuses) for exclusion
+    const { data: fullAnimeListData } = useQuery(USER_ANIME_COLLECTION_QUERY, {
+        variables: { userId: user?.id },
+        skip: !isAuthenticated || !user?.id,
+        fetchPolicy: 'cache-and-network'
+    });
+
+    // Get user's top genre (by minutes watched - most consumed)
+    const topAnimeGenre = useMemo(() => {
+        const genreStats = userStatsData?.User?.statistics?.anime?.genres || [];
+        // Sort by minutes watched (most consumed genre)
+        const sorted = [...genreStats]
+            .filter((g: any) => g.count >= 3)
+            .sort((a: any, b: any) => b.minutesWatched - a.minutesWatched);
+        return sorted.length > 0 ? sorted[0].genre : 'Action';
+    }, [userStatsData]);
+
+    // Get user's top manga genre (by chapters read)
+    const topMangaGenre = useMemo(() => {
+        const genreStats = userStatsData?.User?.statistics?.manga?.genres || [];
+        const sorted = [...genreStats]
+            .filter((g: any) => g.count >= 3)
+            .sort((a: any, b: any) => b.chaptersRead - a.chaptersRead);
+        return sorted.length > 0 ? sorted[0].genre : 'Action';
+    }, [userStatsData]);
+
+    // Fetch personalized anime recommendations (based on user's top genre)
+    const { data: recommendationsData } = useQuery(GENRE_RECOMMENDATIONS_QUERY, {
+        variables: { genre: topAnimeGenre, perPage: 30 },
+        skip: !isAuthenticated,
+        fetchPolicy: 'cache-and-network'
+    });
+
+    // Fetch personalized manga recommendations (based on user's top manga genre)
+    const { data: mangaRecommendationsData } = useQuery(MANGA_GENRE_RECOMMENDATIONS_QUERY, {
+        variables: { genre: topMangaGenre, perPage: 30 },
+        skip: !isAuthenticated,
+        fetchPolicy: 'cache-and-network'
+    });
+
+    // Fetch user's FULL manga list (all statuses) for exclusion
+    const { data: fullMangaListData } = useQuery(USER_MANGA_COLLECTION_QUERY, {
+        variables: { userId: user?.id },
+        skip: !isAuthenticated || !user?.id,
         fetchPolicy: 'cache-and-network'
     });
 
@@ -147,6 +201,42 @@ function Home() {
             .sort((a: any, b: any) => a.nextEpisode.timeUntilAiring - b.nextEpisode.timeUntilAiring)
             .slice(0, 6);
     }, [isAuthenticated, animeList, planningData]);
+
+    // Filter recommendations to exclude anime already on ANY user list
+    const filteredRecommendations = useMemo(() => {
+        if (!recommendationsData?.Page?.media) return [];
+
+        // Get all anime IDs user already has on ANY list
+        const userAnimeIds = new Set<number>();
+
+        // From FULL anime list (all statuses: CURRENT, COMPLETED, PLANNING, PAUSED, DROPPED, REPEATING)
+        if (fullAnimeListData?.MediaListCollection?.lists) {
+            fullAnimeListData.MediaListCollection.lists.flatMap((l: any) => l.entries)
+                .forEach((e: any) => userAnimeIds.add(e.media.id));
+        }
+
+        // Filter recommendations
+        return recommendationsData.Page.media
+            .filter((anime: any) => !userAnimeIds.has(anime.id))
+            .slice(0, 8);
+    }, [recommendationsData, fullAnimeListData]);
+
+    // Filter manga recommendations to exclude manga already on ANY user list
+    const filteredMangaRecommendations = useMemo(() => {
+        if (!mangaRecommendationsData?.Page?.media) return [];
+
+        // Get all manga IDs user already has on ANY list
+        const userMangaIds = new Set<number>();
+
+        if (fullMangaListData?.MediaListCollection?.lists) {
+            fullMangaListData.MediaListCollection.lists.flatMap((l: any) => l.entries)
+                .forEach((e: any) => userMangaIds.add(e.media.id));
+        }
+
+        return mangaRecommendationsData.Page.media
+            .filter((manga: any) => !userMangaIds.has(manga.id))
+            .slice(0, 8);
+    }, [mangaRecommendationsData, fullMangaListData]);
 
     const handleAnimeClick = useCallback((id: number) => {
         navigateWithTransition(`/anime/${id}`);
@@ -426,6 +516,7 @@ function Home() {
                     </div>
                 )}
 
+
                 {/* Upcoming Episodes Section */}
                 {isAuthenticated && upcomingEpisodes.length > 0 && (
                     <div className="shrink-0">
@@ -479,6 +570,82 @@ function Home() {
                                     </div>
                                 );
                             })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Recommended For You Section - Based on Top-Rated Genre */}
+                {isAuthenticated && filteredRecommendations.length > 0 && (
+                    <div className="shrink-0">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-xs font-bold tracking-wider uppercase flex items-center gap-2"
+                                style={{
+                                    color: 'var(--theme-accent-primary)',
+                                    fontFamily: 'var(--font-rounded)'
+                                }}
+                            >
+                                <div className="w-1.5 h-1.5 rounded-full bg-[var(--theme-accent-primary)] shadow-[0_0_8px_var(--theme-accent-primary)]"></div>
+                                RECOMMENDED FOR YOU
+                                <span className="ml-2 text-[10px] font-normal opacity-60">
+                                    Based on your love for {topAnimeGenre}
+                                </span>
+                            </h3>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                            {filteredRecommendations.map((anime: any) => (
+                                <FadeIn key={anime.id}>
+                                    <AnimeCard
+                                        anime={{
+                                            id: anime.id,
+                                            title: anime.title,
+                                            coverImage: anime.coverImage,
+                                            episodes: anime.episodes,
+                                            averageScore: anime.averageScore,
+                                            format: anime.format,
+                                        }}
+                                        onClick={() => handleAnimeClick(anime.id)}
+                                    />
+                                </FadeIn>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Recommended Manga For You Section */}
+                {isAuthenticated && filteredMangaRecommendations.length > 0 && (
+                    <div className="shrink-0">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-xs font-bold tracking-wider uppercase flex items-center gap-2"
+                                style={{
+                                    color: '#4ade80',
+                                    fontFamily: 'var(--font-rounded)'
+                                }}
+                            >
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#4ade80] shadow-[0_0_8px_#4ade80]"></div>
+                                MANGA FOR YOU
+                                <span className="ml-2 text-[10px] font-normal opacity-60">
+                                    Based on your love for {topMangaGenre}
+                                </span>
+                            </h3>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                            {filteredMangaRecommendations.map((manga: any) => (
+                                <FadeIn key={manga.id}>
+                                    <AnimeCard
+                                        anime={{
+                                            id: manga.id,
+                                            title: manga.title,
+                                            coverImage: manga.coverImage,
+                                            episodes: manga.chapters,
+                                            averageScore: manga.averageScore,
+                                            format: manga.format,
+                                        }}
+                                        onClick={() => handleMangaClick(manga.id)}
+                                    />
+                                </FadeIn>
+                            ))}
                         </div>
                     </div>
                 )}

@@ -273,9 +273,9 @@ function AnimeSourceDetails() {
         <div className="anime-source-details">
             {/* Hero Section */}
             <div className="hero-section">
-                <div className="hero-bg" style={{ backgroundImage: `url(${anime.coverUrl})` }} />
+                {anime.coverUrl && <div className="hero-bg" style={{ backgroundImage: `url(${anime.coverUrl})` }} />}
                 <div className="hero-content">
-                    <img src={anime.coverUrl} alt={anime.title} className="cover-image" />
+                    {anime.coverUrl && <img src={anime.coverUrl} alt={anime.title} className="cover-image" />}
                     <div className="anime-info">
                         <span className="source-badge">
                             {source?.name || 'Unknown Source'}

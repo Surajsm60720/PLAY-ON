@@ -106,3 +106,104 @@
 .error-actions button:hover {
     filter: brightness(1.1);
 }
+
+/* ===================== */
+/* Embed Player Styles   */
+/* ===================== */
+.embed-player {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+}
+
+.embed-title {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 20px 80px;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85), transparent);
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 500;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.embed-player iframe {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #000;
+}
+
+.embed-nav {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 24px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.embed-player:hover .embed-nav {
+    opacity: 1;
+}
+
+.nav-btn {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.nav-btn:active {
+    transform: translateY(0);
+}
+
+.nav-btn.prev {
+    margin-right: auto;
+}
+
+.nav-btn.next {
+    margin-left: auto;
+    background: var(--color-zen-accent, #B4A2F6);
+    color: #000;
+    border-color: transparent;
+}
+
+.nav-btn.next:hover {
+    background: #cbbdf8;
+    border-color: transparent;
+}

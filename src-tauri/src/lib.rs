@@ -29,6 +29,8 @@ use win_name as platform_window;
 #[cfg(target_os = "macos")]
 use mac_name as platform_window;
 
+use std::net::{IpAddr, SocketAddr};
+use std::str::FromStr;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -716,12 +718,23 @@ async fn open_browser_window(
 }
 
 /// Proxy video stream requests to bypass CORS and inject headers
+/// Uses DoH to bypass ISP blocks
 #[tauri::command]
 async fn stream_proxy(
     url: String,
     headers: std::collections::HashMap<String, String>,
 ) -> Result<Vec<u8>, String> {
-    let client = reqwest::Client::new();
+    let url_obj = reqwest::Url::parse(&url).map_err(|e| e.to_string())?;
+    let host = url_obj.host_str().ok_or("No host in URL")?;
+
+    let mut client_builder = reqwest::Client::builder();
+    if let Some(ip) = resolve_host(host).await {
+        let port = url_obj.port_or_known_default().unwrap_or(443);
+        let addr = SocketAddr::new(ip, port);
+        client_builder = client_builder.resolve(host, addr);
+    }
+    let client = client_builder.build().map_err(|e| e.to_string())?;
+
     let mut request = client.get(&url);
 
     for (key, value) in headers {
@@ -731,6 +744,100 @@ async fn stream_proxy(
     let response = request.send().await.map_err(|e| e.to_string())?;
     let bytes = response.bytes().await.map_err(|e| e.to_string())?;
     Ok(bytes.to_vec())
+}
+
+lazy_static::lazy_static! {
+    static ref DNS_CACHE: Mutex<HashMap<String, IpAddr>> = Mutex::new(HashMap::new());
+}
+
+async fn resolve_host(host: &str) -> Option<IpAddr> {
+    {
+        let cache = DNS_CACHE.lock().unwrap();
+        if let Some(ip) = cache.get(host) {
+            return Some(*ip);
+        }
+    }
+
+    println!("[DNS] Resolving {} via Google DoH...", host);
+    let client = reqwest::Client::new();
+    let url = format!("https://dns.google/resolve?name={}&type=A", host);
+
+    if let Ok(res) = client.get(&url).send().await {
+        if let Ok(json) = res.json::<serde_json::Value>().await {
+            if let Some(answers) = json["Answer"].as_array() {
+                for answer in answers {
+                    if let Some(data) = answer["data"].as_str() {
+                        if let Ok(ip) = IpAddr::from_str(data) {
+                            println!("[DNS] Resolved {} -> {}", host, ip);
+                            let mut cache = DNS_CACHE.lock().unwrap();
+                            cache.insert(host.to_string(), ip);
+                            return Some(ip);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    println!("[DNS] Failed to resolve {} via DoH", host);
+    None
+}
+
+/// Generic proxy request command with DoH support
+/// Used by extensions to bypass ISP blocks
+#[tauri::command]
+async fn proxy_request(
+    method: String,
+    url: String,
+    headers: std::collections::HashMap<String, String>,
+    body: Option<String>,
+) -> Result<String, String> {
+    let url_obj = reqwest::Url::parse(&url).map_err(|e| e.to_string())?;
+    let host = url_obj.host_str().ok_or("No host in URL")?;
+
+    let mut client_builder = reqwest::Client::builder();
+
+    if let Some(ip) = resolve_host(host).await {
+        let port = url_obj.port_or_known_default().unwrap_or(443);
+        let addr = SocketAddr::new(ip, port);
+        client_builder = client_builder.resolve(host, addr);
+    }
+
+    let client = client_builder.build().map_err(|e| e.to_string())?;
+
+    let mut req_builder = match method.as_str() {
+        "GET" => client.get(&url),
+        "POST" => client.post(&url),
+        "PUT" => client.put(&url),
+        "DELETE" => client.delete(&url),
+        _ => client.get(&url),
+    };
+
+    for (k, v) in headers {
+        req_builder = req_builder.header(&k, &v);
+    }
+
+    if let Some(b) = body {
+        req_builder = req_builder.body(b);
+    }
+
+    let res = req_builder.send().await.map_err(|e| e.to_string())?;
+    let status = res.status().as_u16();
+    let res_headers: std::collections::HashMap<String, String> = res
+        .headers()
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
+        .collect();
+
+    let text = res.text().await.map_err(|e| e.to_string())?;
+
+    let response_data = serde_json::json!({
+        "ok": status >= 200 && status < 300,
+        "status": status,
+        "headers": res_headers,
+        "data": text
+    });
+
+    Ok(response_data.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -798,7 +905,7 @@ pub fn run() {
             mal_get_manga_list,
             // Browser window command
             open_browser_window,
-            // Stream proxy
+            proxy_request,
             stream_proxy
         ])
         .setup(|app| {

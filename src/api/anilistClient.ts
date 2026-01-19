@@ -405,6 +405,51 @@ query ($search: String, $page: Int, $perPage: Int) {
 }
 `;
 
+// Query for personalized anime recommendations based on genre
+export const GENRE_RECOMMENDATIONS_QUERY = gql`
+query ($genre: String, $perPage: Int) {
+  Page(perPage: $perPage) {
+    media(genre: $genre, type: ANIME, sort: POPULARITY_DESC, status_not: NOT_YET_RELEASED) {
+      id
+      title {
+        english
+        romaji
+      }
+      coverImage {
+        large
+        medium
+      }
+      averageScore
+      format
+      episodes
+    }
+  }
+}
+`;
+
+// Query for personalized manga recommendations based on genre
+export const MANGA_GENRE_RECOMMENDATIONS_QUERY = gql`
+query ($genre: String, $perPage: Int) {
+  Page(perPage: $perPage) {
+    media(genre: $genre, type: MANGA, sort: POPULARITY_DESC, status_not: NOT_YET_RELEASED) {
+      id
+      title {
+        english
+        romaji
+      }
+      coverImage {
+        large
+        medium
+      }
+      averageScore
+      format
+      chapters
+    }
+  }
+}
+`;
+
+
 const MANGA_DETAILS_QUERY = gql`
 query ($id: Int) {
   Media (id: $id, type: MANGA) {
@@ -503,6 +548,7 @@ const ANIME_DETAILS_QUERY = gql`
 query ($id: Int) {
   Media (id: $id, type: ANIME) {
     id
+    idMal
     isFavourite
     title {
       english
@@ -604,6 +650,40 @@ query ($userId: Int, $page: Int, $perPage: Int) {
         status
         progress
         createdAt
+        media {
+          id
+          type
+          title {
+            english
+            romaji
+          }
+          coverImage {
+            medium
+          }
+        }
+      }
+    }
+  }
+}
+`;
+
+// Query for activities from users the current user follows
+export const FOLLOWING_ACTIVITY_QUERY = gql`
+query ($page: Int, $perPage: Int) {
+  Page (page: $page, perPage: $perPage) {
+    activities (isFollowing: true, type: MEDIA_LIST, sort: ID_DESC) {
+      ... on ListActivity {
+        id
+        status
+        progress
+        createdAt
+        user {
+          id
+          name
+          avatar {
+            medium
+          }
+        }
         media {
           id
           type
@@ -1305,3 +1385,17 @@ export async function markNotificationsAsRead(): Promise<void> {
 }
 
 
+
+
+/**
+ * Fetches activity from users the current user follows.
+ */
+export async function fetchFollowingActivity(page = 1, perPage = 25) {
+  const result = await apolloClient.query({
+    query: FOLLOWING_ACTIVITY_QUERY,
+    variables: { page, perPage },
+    fetchPolicy: 'network-only',
+  });
+
+  return result.data?.Page?.activities || [];
+}

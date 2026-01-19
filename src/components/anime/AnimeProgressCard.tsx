@@ -2,7 +2,7 @@ import { Anime } from '../../hooks/useAnimeData';
 import ElasticSlider from '../ui/ElasticSlider';
 import { updateMediaProgress } from '../../api/anilistClient';
 import { useState } from 'react';
-import { MinusIcon, PlusIcon, CheckIcon } from '../ui/Icons';
+import { PlusIcon, CheckIcon } from '../ui/Icons';
 
 interface AnimeProgressCardProps {
     anime: Anime;
