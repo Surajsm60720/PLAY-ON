@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useAniListNotifications } from '../../hooks/useAniListNotifications';
-import { HistoryIcon, BellIcon, SettingsIcon } from '../ui/Icons';
+import { HistoryIcon, BellIcon, SettingsIcon, UsersIcon } from '../ui/Icons';
 
 // Detect if running on macOS
 const isMacOS = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -130,6 +130,36 @@ function Titlebar() {
             >
                 <HistoryIcon size={16} />
             </button>
+
+            {/* Community Icon */}
+            {isAuthenticated && (
+                <button
+                    onClick={() => navigate('/community')}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--color-text-muted)',
+                        cursor: 'pointer',
+                        padding: '6px',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
+                        e.currentTarget.style.color = 'var(--color-text-main)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--color-text-muted)';
+                    }}
+                    title="Community"
+                >
+                    <UsersIcon size={16} />
+                </button>
+            )}
 
             {/* Notifications Icon */}
             {isAuthenticated && (

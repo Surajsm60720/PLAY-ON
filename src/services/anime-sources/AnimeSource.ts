@@ -71,6 +71,8 @@ export interface VideoSource {
     isM3U8: boolean;
     /** Whether this is a backup source */
     isBackup?: boolean;
+    /** Whether this is an embed iframe (can't be played directly) */
+    isEmbed?: boolean;
 }
 
 /**

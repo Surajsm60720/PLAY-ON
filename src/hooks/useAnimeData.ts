@@ -29,6 +29,26 @@ export interface Anime {
     averageScore?: number;
     seasonYear?: number;
     genres?: string[];
+    relations?: {
+        edges: {
+            relationType: string;
+            node: {
+                id: number;
+                title: {
+                    romaji: string;
+                    english?: string;
+                    native?: string;
+                };
+                format?: string;
+                type?: string;
+                status?: string;
+                coverImage?: {
+                    large: string;
+                    medium: string;
+                };
+            };
+        }[];
+    };
     description?: string;
     studios?: {
         nodes: { name: string }[];

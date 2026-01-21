@@ -12,14 +12,49 @@
 
 import { AnimeExtension } from './types';
 import { AnimeExtensionStorage } from './AnimeExtensionStorage';
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { invoke } from '@tauri-apps/api/core';
 
-// Production fix: Ensure we have a valid fetch function
-const getFetch = () => {
-    if (typeof tauriFetch === 'function') return tauriFetch;
-    if (typeof window !== 'undefined' && window.fetch) return window.fetch.bind(window);
-    if (typeof globalThis !== 'undefined' && globalThis.fetch) return globalThis.fetch.bind(globalThis);
-    throw new Error('No fetch implementation found!');
+// Proxy fetch that routes requests through the Rust backend (with DoH bypass)
+const getProxyFetch = () => {
+    return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const url = input.toString();
+        const method = init?.method || 'GET';
+
+        const headers: Record<string, string> = {};
+        if (init?.headers) {
+            if (init.headers instanceof Headers) {
+                init.headers.forEach((v, k) => headers[k] = v);
+            } else if (Array.isArray(init.headers)) {
+                init.headers.forEach(([k, v]) => headers[k] = v);
+            } else {
+                Object.entries(init.headers).forEach(([k, v]) => headers[k] = String(v));
+            }
+        }
+
+        let body: string | undefined;
+        if (init?.body) {
+            body = init.body.toString();
+        }
+
+        try {
+            const responseStr = await invoke<string>('proxy_request', {
+                method,
+                url,
+                headers,
+                body
+            });
+
+            const data = JSON.parse(responseStr);
+
+            return new Response(data.data, {
+                status: data.status,
+                headers: new Headers(data.headers)
+            });
+        } catch (e) {
+            console.error('[ProxyFetch] Error:', e);
+            throw new TypeError('Network request failed');
+        }
+    };
 };
 
 class AnimeLoaderService {
@@ -27,7 +62,7 @@ class AnimeLoaderService {
     private loadErrors: Map<string, string> = new Map();
     private initialized: boolean = false;
 
-    private readonly fetch = getFetch();
+    private readonly fetch = getProxyFetch();
 
     /**
      * Initialize the loader - load all enabled extensions from storage

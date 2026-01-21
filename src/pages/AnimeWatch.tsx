@@ -8,7 +8,7 @@
  * ====================================================================
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { AnimeExtensionManager, EpisodeSources, VideoSource } from '../services/AnimeExtensionManager';
 import StreamPlayer from '../components/ui/StreamPlayer';
@@ -17,6 +17,9 @@ import { getAnimeEntryBySourceId, updateAnimeProgress, markAnimeAsSynced } from 
 import { updateMediaProgress } from '../api/anilistClient';
 import { updateAnimeActivity, setBrowsingActivity } from '../services/discordRPC';
 import { sendDesktopNotification } from '../services/notification';
+import { getSkipTimes, SkipTime } from '../services/skipTimes';
+import { fetchAnimeDetails, searchAnime } from '../api/anilistClient';
+import { trackAnimeSession } from '../services/StatsService';
 import './AnimeWatch.css';
 
 function AnimeWatch() {
@@ -29,7 +32,9 @@ function AnimeWatch() {
     const animeId = searchParams.get('animeId');
 
     const [sources, setSources] = useState<StreamingSource[]>([]);
+    const [embedUrl, setEmbedUrl] = useState<string | null>(null); // For iframe fallback
     const [subtitles, setSubtitles] = useState<{ url: string; lang: string }[]>([]);
+    const [skipTimes, setSkipTimes] = useState<SkipTime[]>([]);
     const [headers, setHeaders] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -43,12 +48,34 @@ function AnimeWatch() {
     }, [sourceId]);
 
     // Convert extension VideoSource to StreamPlayer's format
-    const convertSources = (episodeSources: EpisodeSources): StreamingSource[] => {
-        return episodeSources.sources.map((s: VideoSource) => ({
-            url: s.url,
-            quality: s.quality,
-            isM3U8: s.isM3U8,
-        }));
+    // Returns null if all sources are embeds (need iframe fallback)
+    const convertSources = (episodeSources: EpisodeSources): { sources: StreamingSource[], embedUrl: string | null } => {
+        // Separate embed sources from direct sources
+        const directSources = episodeSources.sources.filter((s: VideoSource) => !s.isEmbed);
+        const embedSources = episodeSources.sources.filter((s: VideoSource) => s.isEmbed);
+
+        // If we have direct sources, use those
+        if (directSources.length > 0) {
+            return {
+                sources: directSources.map((s: VideoSource) => ({
+                    url: s.url,
+                    quality: s.quality,
+                    isM3U8: s.isM3U8,
+                })),
+                embedUrl: null
+            };
+        }
+
+        // Otherwise, use the first embed source
+        if (embedSources.length > 0) {
+            console.log('[AnimeWatch] Only embed sources available, using iframe fallback');
+            return {
+                sources: [],
+                embedUrl: embedSources[0].url
+            };
+        }
+
+        return { sources: [], embedUrl: null };
     };
 
     // Fetch episode sources
@@ -58,16 +85,66 @@ function AnimeWatch() {
         const fetchSources = async () => {
             setLoading(true);
             setError(null);
+            setSkipTimes([]); // Reset skip times
 
             try {
                 const decodedEpisodeId = decodeURIComponent(episodeId);
+                const decodedAnimeId = animeId ? decodeURIComponent(animeId) : '';
+                const epNum = parseInt(episodeNum);
+
+                // --- Step 1: Resolve AniList ID and MAL ID (needed for vidsrc fallback and skip times) ---
+                let malId: number | null = null;
+                let anilistId: number | null = null;
+                try {
+                    const localEntry = sourceId ? getAnimeEntryBySourceId(sourceId, decodedAnimeId) : null;
+                    if (localEntry && localEntry.anilistId) {
+                        anilistId = localEntry.anilistId;
+                        const { data } = await fetchAnimeDetails(localEntry.anilistId);
+                        malId = data?.Media?.idMal;
+                        statsMeta.current = { id: anilistId!, cover: data?.Media?.coverImage?.large, genres: data?.Media?.genres };
+                    } else if (!isNaN(parseInt(decodedAnimeId))) {
+                        anilistId = parseInt(decodedAnimeId);
+                        const { data } = await fetchAnimeDetails(anilistId);
+                        malId = data?.Media?.idMal;
+                        statsMeta.current = { id: anilistId!, cover: data?.Media?.coverImage?.large, genres: data?.Media?.genres };
+                    } else if (animeTitle) {
+                        console.log(`[AnimeWatch] Searching AniList for: ${animeTitle}`);
+                        const { data } = await searchAnime(animeTitle, 1, 1);
+                        if (data?.Page?.media?.length > 0) {
+                            const foundAnime = data.Page.media[0];
+                            if (foundAnime.id) {
+                                anilistId = foundAnime.id;
+                                const { data: detailsData } = await fetchAnimeDetails(foundAnime.id);
+                                malId = detailsData?.Media?.idMal;
+                                statsMeta.current = { id: anilistId!, cover: detailsData?.Media?.coverImage?.large, genres: detailsData?.Media?.genres };
+                            }
+                        }
+                    }
+                    console.log(`[AnimeWatch] Resolved AniList ID: ${anilistId || 'none'}, MAL ID: ${malId || 'none'}`);
+                } catch (e) {
+                    console.warn('[AnimeWatch] Failed to resolve IDs:', e);
+                }
+
+                // --- Step 2: Fetch sources from extension ---
                 const episodeSources = await source.getEpisodeSources(decodedEpisodeId);
 
                 if (episodeSources.sources.length === 0) {
                     throw new Error('No video sources found');
                 }
 
-                setSources(convertSources(episodeSources));
+                let { sources: convertedSources, embedUrl: convertedEmbed } = convertSources(episodeSources);
+
+                // --- Step 3: If only embeds and we have AniList ID, use vidsrc.icu instead ---
+                if (convertedSources.length === 0 && convertedEmbed && anilistId) {
+                    // Use vidsrc.icu with AniList ID for reliable playback
+                    // Format: https://vidsrc.icu/embed/anime/{anilistId}/{episode}/{dub} (0=sub, 1=dub)
+                    const vidsrcUrl = `https://vidsrc.icu/embed/anime/${anilistId}/${epNum || 1}/0`;
+                    console.log(`[AnimeWatch] Using vidsrc.icu with AniList ID: ${vidsrcUrl}`);
+                    convertedEmbed = vidsrcUrl;
+                }
+
+                setSources(convertedSources);
+                setEmbedUrl(convertedEmbed);
 
                 // Set subtitles if available
                 if (episodeSources.subtitles && episodeSources.subtitles.length > 0) {
@@ -77,6 +154,24 @@ function AnimeWatch() {
 
                 if (episodeSources.headers) {
                     setHeaders(episodeSources.headers);
+                }
+
+                // --- Step 4: Fetch Skip Times using the MAL ID we already resolved ---
+                if (malId && !isNaN(epNum)) {
+                    try {
+                        console.log(`[AnimeWatch] Fetching skip times for MAL ${malId} Ep ${epNum}`);
+                        const skips = await getSkipTimes(malId, epNum);
+                        if (skips.length > 0) {
+                            console.log('[AnimeWatch] Skip times found:', skips);
+                            setSkipTimes(skips);
+                        } else {
+                            console.log('[AnimeWatch] No skip times found for this episode.');
+                        }
+                    } catch (e) {
+                        console.warn('[AnimeWatch] Failed to fetch skip times:', e);
+                    }
+                } else {
+                    console.warn('[AnimeWatch] Could not resolve MAL ID for skip times.');
                 }
 
                 // Discord RPC Update
@@ -182,7 +277,53 @@ function AnimeWatch() {
 
     const [hasSynced, setHasSynced] = useState(false);
 
-    const handleProgress = async (progress: number, _currentTime: number, _duration: number) => {
+    const accumulatedWatchTime = useRef<number>(0);
+    const lastProgressTime = useRef<number>(0);
+    const statsMeta = useRef<{ id: number; cover?: string; genres?: string[] }>({ id: 0 });
+
+    // Reset stats tracking on new episode
+    useEffect(() => {
+        accumulatedWatchTime.current = 0;
+        lastProgressTime.current = 0;
+        // metadata is updated in the data fetching effect
+    }, [episodeId, sourceId]);
+
+    const handleProgress = async (progress: number, currentTime: number, _duration: number) => {
+        // --- Stats Tracking Logic ---
+        const delta = currentTime - lastProgressTime.current;
+        // Only count positive increments that look like normal playback (e.g., < 5s)
+        // This avoids counting seek jumps as "watched time"
+        if (delta > 0 && delta < 5) {
+            accumulatedWatchTime.current += delta;
+
+            if (accumulatedWatchTime.current >= 60) {
+                const minutes = Math.floor(accumulatedWatchTime.current / 60);
+                accumulatedWatchTime.current %= 60; // Keep remainder
+
+                if (statsMeta.current.id) {
+                    trackAnimeSession(
+                        statsMeta.current.id,
+                        animeTitle,
+                        statsMeta.current.cover,
+                        minutes,
+                        statsMeta.current.genres || []
+                    );
+                } else {
+                    // Try to resolve generic ID if metadata isn't fully loaded yet but we have a title
+                    // Use a hash or temporary ID 0
+                    trackAnimeSession(
+                        0,
+                        animeTitle,
+                        undefined,
+                        minutes,
+                        []
+                    );
+                }
+            }
+        }
+        lastProgressTime.current = currentTime;
+        // -----------------------------
+
         // Sync to AniList at 80% completion
         if (progress >= 80 && !hasSynced && animeId && sourceId) {
             setHasSynced(true); // Prevent multiple syncs
@@ -289,19 +430,50 @@ function AnimeWatch() {
                 </svg>
             </button>
 
-            {/* Video Player */}
-            <StreamPlayer
-                sources={sources}
-                subtitles={subtitles}
-                title={`${animeTitle} - Episode ${episodeNum}`}
-                onProgress={handleProgress}
-                onEnded={handleEnded}
-                headers={headers}
-                onNext={nextEpisodeId ? handleNextEpisode : undefined}
-                hasNextEpisode={!!nextEpisodeId}
-                onPrev={prevEpisodeId ? handlePrevEpisode : undefined}
-                hasPrevEpisode={!!prevEpisodeId}
-            />
+            {/* Video Player - Use iframe for embeds, StreamPlayer for direct sources */}
+            {embedUrl ? (
+                <div className="embed-player">
+                    <div className="embed-title">{animeTitle} - Episode {episodeNum}</div>
+                    <iframe
+                        src={embedUrl}
+                        title={`${animeTitle} - Episode ${episodeNum}`}
+                        allowFullScreen
+                        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            border: 'none',
+                            backgroundColor: '#000'
+                        }}
+                    />
+                    <div className="embed-nav">
+                        {prevEpisodeId && (
+                            <button onClick={handlePrevEpisode} className="nav-btn prev">
+                                ← Previous
+                            </button>
+                        )}
+                        {nextEpisodeId && (
+                            <button onClick={handleNextEpisode} className="nav-btn next">
+                                Next →
+                            </button>
+                        )}
+                    </div>
+                </div>
+            ) : (
+                <StreamPlayer
+                    sources={sources}
+                    subtitles={subtitles}
+                    title={`${animeTitle} - Episode ${episodeNum}`}
+                    onProgress={handleProgress}
+                    onEnded={handleEnded}
+                    headers={headers}
+                    onNext={nextEpisodeId ? handleNextEpisode : undefined}
+                    hasNextEpisode={!!nextEpisodeId}
+                    onPrev={prevEpisodeId ? handlePrevEpisode : undefined}
+                    hasPrevEpisode={!!prevEpisodeId}
+                    skipTimes={skipTimes}
+                />
+            )}
         </div>
     );
 }

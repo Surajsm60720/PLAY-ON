@@ -52,12 +52,13 @@ query ($userId: Int, $status: MediaListStatus) {
 
 export const USER_STATUS_ANIME_COLLECTION_QUERY = gql`
 query ($userId: Int, $status: MediaListStatus) {
-  MediaListCollection(userId: $userId, type: ANIME, status: $status) {
+  MediaListCollection(userId: $userId, type: ANIME, status: $status, sort: UPDATED_TIME_DESC) {
     lists {
       name
       entries {
         id
         progress
+        updatedAt
         media {
           id
           title {
@@ -133,6 +134,8 @@ query ($userId: Int) {
           }
           episodes
           status
+          genres
+          averageScore
           nextAiringEpisode {
             episode
             timeUntilAiring
@@ -370,6 +373,8 @@ query ($userId: Int) {
           chapters
           volumes
           status
+          genres
+          averageScore
         }
       }
     }
@@ -404,6 +409,51 @@ query ($search: String, $page: Int, $perPage: Int) {
   }
 }
 `;
+
+// Query for personalized anime recommendations based on multiple genres
+export const GENRE_RECOMMENDATIONS_QUERY = gql`
+query ($genres: [String], $perPage: Int) {
+  Page(perPage: $perPage) {
+    media(genre_in: $genres, type: ANIME, sort: POPULARITY_DESC, status_not: NOT_YET_RELEASED) {
+      id
+      title {
+        english
+        romaji
+      }
+      coverImage {
+        large
+        medium
+      }
+      averageScore
+      format
+      episodes
+    }
+  }
+}
+`;
+
+// Query for personalized manga recommendations based on multiple genres
+export const MANGA_GENRE_RECOMMENDATIONS_QUERY = gql`
+query ($genres: [String], $perPage: Int) {
+  Page(perPage: $perPage) {
+    media(genre_in: $genres, type: MANGA, sort: POPULARITY_DESC, status_not: NOT_YET_RELEASED) {
+      id
+      title {
+        english
+        romaji
+      }
+      coverImage {
+        large
+        medium
+      }
+      averageScore
+      format
+      chapters
+    }
+  }
+}
+`;
+
 
 const MANGA_DETAILS_QUERY = gql`
 query ($id: Int) {
@@ -442,6 +492,26 @@ query ($id: Int) {
       day
     }
     genres
+    relations {
+      edges {
+        relationType(version: 2)
+        node {
+          id
+          title {
+            romaji
+            english
+            native
+          }
+          format
+          type
+          status
+          coverImage {
+            large
+            medium
+          }
+        }
+      }
+    }
     staff(perPage: 3) {
       nodes {
         name {
@@ -483,6 +553,7 @@ const ANIME_DETAILS_QUERY = gql`
 query ($id: Int) {
   Media (id: $id, type: ANIME) {
     id
+    idMal
     isFavourite
     title {
       english
@@ -512,6 +583,26 @@ query ($id: Int) {
     seasonYear
     season
     genres
+    relations {
+      edges {
+        relationType(version: 2)
+        node {
+          id
+          title {
+            romaji
+            english
+            native
+          }
+          format
+          type
+          status
+          coverImage {
+            large
+            medium
+          }
+        }
+      }
+    }
     studios(isMain: true) {
       nodes {
         name
@@ -581,6 +672,40 @@ query ($userId: Int, $page: Int, $perPage: Int) {
 }
 `;
 
+// Query for activities from users the current user follows
+export const FOLLOWING_ACTIVITY_QUERY = gql`
+query ($page: Int, $perPage: Int) {
+  Page (page: $page, perPage: $perPage) {
+    activities (isFollowing: true, type: MEDIA_LIST, sort: ID_DESC) {
+      ... on ListActivity {
+        id
+        status
+        progress
+        createdAt
+        user {
+          id
+          name
+          avatar {
+            medium
+          }
+        }
+        media {
+          id
+          type
+          title {
+            english
+            romaji
+          }
+          coverImage {
+            medium
+          }
+        }
+      }
+    }
+  }
+}
+`;
+
 const VIEWER_QUERY = gql`
 query {
   Viewer {
@@ -613,10 +738,11 @@ query {
 // ============================================================================
 
 const UPDATE_MEDIA_PROGRESS_MUTATION = gql`
-mutation UpdateMediaProgress($mediaId: Int, $progress: Int, $status: MediaListStatus) {
-  SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status) {
+mutation UpdateMediaProgress($mediaId: Int, $progress: Int, $status: MediaListStatus, $score: Int) {
+  SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status, scoreRaw: $score) {
     id
     progress
+    score(format: POINT_100)
     status
     media {
       id
@@ -835,6 +961,7 @@ const executeUpdateMediaProgress = async (variables: any) => {
         id: -1,
         progress: variables.progress,
         status: variables.status || "CURRENT",
+        score: variables.score || 0,
         media: {
           __typename: "Media",
           id: variables.mediaId,
@@ -851,11 +978,17 @@ const executeUpdateMediaProgress = async (variables: any) => {
 // Register for offline queue processing
 registerMutationProcessor('UpdateMediaProgress', executeUpdateMediaProgress);
 
+
+
 /**
  * Updates anime progress. Supports offline queuing.
  */
-export async function updateMediaProgress(mediaId: number, progress: number, status?: string) {
-  const variables = { mediaId, progress, status };
+export async function updateMediaProgress(mediaId: number, progress?: number, status?: string, score?: number) {
+  const variables: any = { mediaId };
+  if (progress !== undefined) variables.progress = progress;
+  if (status !== undefined) variables.status = status;
+  if (score !== undefined) variables.score = score;
+
   try {
     return await executeUpdateMediaProgress(variables);
   } catch (err) {
@@ -866,8 +999,10 @@ export async function updateMediaProgress(mediaId: number, progress: number, sta
       return {
         data: {
           SaveMediaListEntry: {
-            progress,
-            status
+            progress: progress || 0,
+            status: status || 'CURRENT',
+            score: score || 0,
+            media: { id: mediaId, title: { english: 'Offline Update' } }
           }
         }
       };
@@ -1243,8 +1378,29 @@ export async function markNotificationsAsRead(): Promise<void> {
     }
   `;
 
-  await apolloClient.query({
-    query: RESET_QUERY,
-    fetchPolicy: 'network-only'
+  try {
+    await apolloClient.query({
+      query: RESET_QUERY,
+      fetchPolicy: 'network-only'
+    });
+  } catch (error) {
+    console.warn("Failed to reset notifications:", error);
+    // Suppress error to avoid crashing the UI
+  }
+}
+
+
+
+
+/**
+ * Fetches activity from users the current user follows.
+ */
+export async function fetchFollowingActivity(page = 1, perPage = 25) {
+  const result = await apolloClient.query({
+    query: FOLLOWING_ACTIVITY_QUERY,
+    variables: { page, perPage },
+    fetchPolicy: 'network-only',
   });
+
+  return result.data?.Page?.activities || [];
 }

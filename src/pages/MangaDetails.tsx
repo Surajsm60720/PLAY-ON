@@ -18,14 +18,20 @@ import { useMangaMappings } from '../hooks/useMangaMappings';
 import { StatusDropdown } from '../components/ui/StatusDropdown';
 import { useMalAuth } from '../context/MalAuthContext';
 import * as malClient from '../api/malClient';
+import { updateMediaProgress } from '../api/anilistClient';
 import AnimeCard from '../components/ui/AnimeCard';
-import Loading from '../components/ui/Loading';
-import { SearchIcon, BookOpenIcon, ArrowRightIcon, HeartIcon } from '../components/ui/Icons';
+import { MediaRelations } from '../components/media/MediaRelations';
+import { ReadMoreText } from '../components/ui/ReadMoreText';
+import ElasticSlider from '../components/ui/ElasticSlider';
+
+import { SearchIcon, BookOpenIcon, ArrowRightIcon, HeartIcon, PlusIcon, CheckIcon } from '../components/ui/Icons';
+import { DetailsSkeleton } from '../components/ui/SkeletonLoader';
 import { motion } from 'framer-motion';
-import { PlayIcon, CheckIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon } from '../components/ui/Icons';
+import { PlayIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon } from '../components/ui/Icons';
 import { useAuth } from '../hooks/useAuth';
 import { setBrowsingActivity } from '../services/discordRPC';
 import { useDynamicTheme } from '../context/DynamicThemeContext';
+import { StatsGrid, StatItem } from '../components/ui/StatsGrid';
 
 // Status options for AniList
 const STATUS_OPTIONS = [
@@ -67,6 +73,26 @@ interface Manga {
         year?: number;
     };
     genres?: string[];
+    relations?: {
+        edges: {
+            relationType: string;
+            node: {
+                id: number;
+                title: {
+                    romaji: string;
+                    english?: string;
+                    native?: string;
+                };
+                format?: string;
+                type?: string;
+                status?: string;
+                coverImage?: {
+                    large: string;
+                    medium: string;
+                };
+            };
+        }[];
+    };
     description?: string;
     staff?: {
         nodes: { name: { full: string } }[];
@@ -120,19 +146,21 @@ function MangaDetails() {
     const [statusUpdating, setStatusUpdating] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
     const [favoriteUpdating, setFavoriteUpdating] = useState(false);
+    const [score, setScore] = useState(0);
+    const [updatingScore, setUpdatingScore] = useState(false);
 
-    // Dynamic theme - use blurred cover art as ambient background
-    const coverImageUrl = manga?.coverImage?.extraLarge || manga?.coverImage?.large;
+    // Dynamic theme - use blurred banner as ambient background (fallback to cover)
+    const bgImage = manga?.bannerImage || manga?.coverImage?.extraLarge || manga?.coverImage?.large;
     const { setCoverImage, clearTheme } = useDynamicTheme();
 
-    // Set cover image for dynamic theming when manga loads
+    // Set background image for dynamic theming when manga loads
     useEffect(() => {
-        if (coverImageUrl) {
-            setCoverImage(coverImageUrl);
+        if (bgImage) {
+            setCoverImage(bgImage);
         }
         // Clear when leaving the page
         return () => clearTheme();
-    }, [coverImageUrl, setCoverImage, clearTheme]);
+    }, [bgImage, setCoverImage, clearTheme]);
 
     // Check if this manga is linked to a source in library
     const mangaMapping = manga ? getMappingByAnilistId(manga.id) : undefined;
@@ -150,6 +178,7 @@ function MangaDetails() {
                     if (data.data.Media.mediaListEntry) {
                         setProgress(data.data.Media.mediaListEntry.progress);
                         setCurrentStatus(data.data.Media.mediaListEntry.status);
+                        setScore(data.data.Media.mediaListEntry.score || 0);
                     } else {
                         setCurrentStatus(null);
                     }
@@ -253,7 +282,7 @@ function MangaDetails() {
         }
     };
 
-    if (loading) return <Loading />;
+    if (loading) return <DetailsSkeleton />;
 
     if (!manga) return (
         <div className="flex h-screen items-center justify-center font-mono text-red-400">
@@ -271,11 +300,11 @@ function MangaDetails() {
     const popularity = manga.popularity?.toLocaleString();
     const source = manga.source?.replace(/_/g, ' ') || 'Original';
 
-    const stats = [
-        { label: 'SCORE', value: manga.averageScore ? `${manga.averageScore}%` : 'N/A', color: 'text-mint-tonic' },
-        { label: 'RANK', value: allTimeRank ? `#${allTimeRank}` : 'N/A', color: 'text-sky-blue' },
-        { label: 'POPULARITY', value: popularity ? popularity : 'N/A', color: 'text-pastels-pink' },
-        { label: 'SOURCE', value: source, color: 'text-white' }
+    const stats: StatItem[] = [
+        { label: 'SCORE', value: manga.averageScore ? `${manga.averageScore}%` : 'N/A', color: 'text-mint-tonic', icon: 'score' },
+        { label: 'RANK', value: allTimeRank ? `#${allTimeRank}` : 'N/A', color: 'text-sky-blue', icon: 'rank' },
+        { label: 'POPULARITY', value: popularity ? popularity : 'N/A', color: 'text-pastels-pink', icon: 'popularity' },
+        { label: 'SOURCE', value: source, color: 'text-white', icon: 'manga' }
     ];
 
     return (
@@ -363,7 +392,7 @@ function MangaDetails() {
 
                         {/* Title Block */}
                         <div>
-                            <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-none mb-4 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
+                            <h1 className="text-2xl md:text-4xl font-black tracking-tight leading-none mb-3 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
                                 {title}
                             </h1>
                             <div className="flex flex-wrap gap-2 text-sm text-white/60 font-mono">
@@ -381,15 +410,9 @@ function MangaDetails() {
                             </div>
                         </div>
 
+
                         {/* Stats Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {stats.map((stat, i) => (
-                                <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/5 backdrop-blur-sm flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-colors">
-                                    <span className="font-mono text-[10px] text-white/40 uppercase tracking-widest">{stat.label}</span>
-                                    <span className={`font-bold text-xl ${stat.color} drop-shadow-md`}>{stat.value}</span>
-                                </div>
-                            ))}
-                        </div>
+                        <StatsGrid stats={stats} />
 
                         {/* Genres - In right column with stats */}
                         <div className="flex flex-wrap gap-2">
@@ -402,114 +425,195 @@ function MangaDetails() {
                     </div>
                 </div>
 
-                {/* Full Width Content Below */}
-                <div className="flex flex-col gap-8">
-                    {/* Description Box */}
-                    <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lavender-mist via-sky-blue to-transparent opacity-50 rounded-t-2xl" />
-                        <div
-                            className="text-base leading-relaxed text-gray-200/90 font-light pr-4"
-                            dangerouslySetInnerHTML={{ __html: manga.description || 'No data available.' }}
+                {/* Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+                    {/* Left Column: Description */}
+                    <div className="lg:col-span-3 relative p-5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner h-fit">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lavender-mist via-sky-blue to-transparent opacity-50 rounded-t-xl" />
+                        <h3 className="text-xs font-mono text-lavender-mist uppercase tracking-widest mb-3">Synopsis</h3>
+                        <ReadMoreText
+                            content={manga.description || 'No data available.'}
+                            maxHeight={200}
                         />
                     </div>
 
-                    {/* Action Button - Search or Continue Reading */}
-                    <motion.button
-                        onClick={handleActionClick}
-                        whileHover={{ scale: 1.01, borderColor: mangaMapping ? 'rgba(56, 189, 248, 0.5)' : 'rgba(180, 162, 246, 0.5)' }}
-                        whileTap={{ scale: 0.98 }}
-                        className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1a1e] to-[#121214] border border-white/10 p-4 text-left shadow-lg"
-                    >
-                        {/* Hover Gradient */}
-                        <motion.div
-                            className={`absolute inset-0 bg-gradient-to-r ${mangaMapping ? 'from-mint-tonic/10' : 'from-lavender-mist/10'} to-transparent`}
-                            initial={{ opacity: 0 }}
-                            whileHover={{ opacity: 1 }}
-                            transition={{ duration: 0.3 }}
-                        />
-
-                        <div className="relative flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                {/* Icon Box */}
-                                <motion.div
-                                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${mangaMapping ? 'bg-mint-tonic/10 text-mint-tonic border-mint-tonic/20' : 'bg-lavender-mist/10 text-lavender-mist border-lavender-mist/20'} border`}
-                                    whileHover={{ rotate: 15, scale: 1.1 }}
-                                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                                >
-                                    {mangaMapping ? (
-                                        <BookOpenIcon size={20} />
-                                    ) : (
-                                        <SearchIcon size={20} />
-                                    )}
-                                </motion.div>
-
-                                {/* Text */}
-                                <div className="flex flex-col gap-0.5">
-                                    <span className={`font-mono text-[10px] uppercase tracking-widest ${mangaMapping ? 'text-mint-tonic' : 'text-lavender-mist'} font-bold`}>
-                                        {mangaMapping ? 'CONTINUE READING' : 'SEARCH THIS MANGA'}
-                                    </span>
-                                    <motion.span
-                                        className="font-bold text-white text-lg truncate max-w-[200px] md:max-w-[300px]"
-                                        whileHover={{ color: mangaMapping ? '#A0E9E5' : '#B4A2F6', x: 2 }}
-                                    >
-                                        {mangaMapping ? mangaMapping.sourceTitle : 'Browse Extensions'}
-                                    </motion.span>
-                                </div>
-                            </div>
-
-                            {/* Arrow */}
-                            <motion.div
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/5 bg-white/5 text-white/40"
-                                whileHover={{
-                                    backgroundColor: mangaMapping ? '#A0E9E5' : '#B4A2F6',
-                                    color: '#121214',
-                                    borderColor: mangaMapping ? '#A0E9E5' : '#B4A2F6',
-                                    x: 5
-                                }}
-                            >
-                                <ArrowRightIcon size={16} />
-                            </motion.div>
-                        </div>
-                    </motion.button>
-
-                    {/* Progress Control */}
-                    <div className="p-1 rounded-2xl bg-gradient-to-r from-white/10 to-transparent p-[1px]">
-                        <div className="bg-[#121214]/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5 flex flex-col gap-4">
-                            {/* Progress Row */}
-                            <div className="flex flex-col md:flex-row items-center gap-6">
-                                <div className="flex-1 w-full">
-                                    <div className="flex justify-between items-center mb-3">
-                                        <span className="font-mono text-xs text-lavender-mist uppercase tracking-widest">PROGRESS</span>
-                                        <span className="font-mono text-xl font-bold">{progress} <span className="text-white/30">/ {manga.chapters || '?'}</span></span>
+                    {/* Right Column: Progress & Actions */}
+                    <div className="lg:col-span-2 flex flex-col gap-4">
+                        {/* Progress Control */}
+                        <div className="p-1 rounded-2xl bg-gradient-to-r from-white/10 to-transparent p-[1px]">
+                            <div className="bg-[#121214]/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5 flex flex-col gap-4">
+                                {/* Progress Row */}
+                                <div className="flex flex-col md:flex-row items-center gap-6">
+                                    <div className="flex-1 w-full">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <span className="font-mono text-xs text-lavender-mist uppercase tracking-widest">PROGRESS</span>
+                                            <span className="font-mono text-xl font-bold">{progress} <span className="text-white/30">/ {manga.chapters || '?'}</span></span>
+                                        </div>
+                                        <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-lavender-mist to-sky-blue relative transition-all duration-300 ease-out"
+                                                style={{ width: `${percentage}%` }}
+                                            >
+                                                <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white shadow-[0_0_10px_white]" />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-lavender-mist to-sky-blue relative transition-all duration-300 ease-out"
-                                            style={{ width: `${percentage}%` }}
+
+                                    <div className="flex gap-2 shrink-0">
+                                        <button
+                                            disabled={progress <= 0 || updating}
+                                            onClick={() => handleProgressUpdate(progress - 1)}
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white disabled:opacity-30"
                                         >
-                                            <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white shadow-[0_0_10px_white]" />
+                                            −
+                                        </button>
+                                        <button
+                                            onClick={() => handleProgressUpdate(progress + 1)}
+                                            disabled={(manga.chapters ? progress >= manga.chapters : false) || updating}
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center bg-white text-black hover:bg-gray-200 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:shadow-none"
+                                        >
+                                            <PlusIcon size={14} strokeWidth={3} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Score Slider */}
+                                <div className="mt-8 pt-6 border-t border-white/5 w-full">
+                                    <div className="flex flex-col md:flex-row items-center gap-6">
+                                        <div className="flex-1 w-full flex items-center justify-between">
+                                            <span className="font-mono text-xs text-mint-tonic uppercase tracking-widest">SCORING</span>
+
+                                            <div className="w-64">
+                                                <ElasticSlider
+                                                    leftIcon={<span className="text-xs font-mono">0</span>}
+                                                    rightIcon={<span className="text-xs font-mono">100</span>}
+                                                    startingValue={0}
+                                                    defaultValue={manga.mediaListEntry?.score || 0}
+                                                    maxValue={100}
+                                                    isStepped
+                                                    stepSize={1}
+                                                    className="w-full"
+                                                    onChange={(val) => {
+                                                        setScore(val);
+                                                    }}
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={async () => {
+                                                    if (updatingScore || !manga) return;
+                                                    setUpdatingScore(true);
+                                                    try {
+                                                        await updateMediaProgress(
+                                                            manga.id,
+                                                            progress,
+                                                            manga.mediaListEntry?.status || 'CURRENT',
+                                                            Math.round(score)
+                                                        );
+                                                    } catch (e) {
+                                                        console.error(e);
+                                                    } finally {
+                                                        setUpdatingScore(false);
+                                                    }
+                                                }}
+                                                disabled={updatingScore}
+                                                className="ml-4 w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 transition-all text-mint-tonic"
+                                            >
+                                                {updatingScore ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckIcon size={14} />}
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
-
-                                <div className="flex gap-2 shrink-0">
-                                    <button
-                                        disabled={progress <= 0 || updating}
-                                        onClick={() => handleProgressUpdate(progress - 1)}
-                                        className="w-12 h-12 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white disabled:opacity-30"
-                                    >
-                                        −
-                                    </button>
-                                    <button
-                                        onClick={() => handleProgressUpdate(progress + 1)}
-                                        disabled={(manga.chapters ? progress >= manga.chapters : false) || updating}
-                                        className="h-12 px-6 rounded-xl flex items-center justify-center font-bold bg-white text-black hover:bg-gray-200 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:shadow-none"
-                                    >
-                                        TRACK +1
-                                    </button>
-                                </div>
                             </div>
                         </div>
+
+                        {/* Action Button - Search or Continue Reading */}
+                        <motion.button
+                            onClick={handleActionClick}
+                            whileHover={{ scale: 1.01, borderColor: mangaMapping ? 'rgba(56, 189, 248, 0.5)' : 'rgba(180, 162, 246, 0.5)' }}
+                            whileTap={{ scale: 0.98 }}
+                            className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1a1e] to-[#121214] border border-white/10 p-4 text-left shadow-lg"
+                        >
+                            {/* Hover Gradient */}
+                            <motion.div
+                                className={`absolute inset-0 bg-gradient-to-r ${mangaMapping ? 'from-mint-tonic/10' : 'from-lavender-mist/10'} to-transparent`}
+                                initial={{ opacity: 0 }}
+                                whileHover={{ opacity: 1 }}
+                                transition={{ duration: 0.3 }}
+                            />
+
+                            <div className="relative flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    {/* Icon Box */}
+                                    <motion.div
+                                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${mangaMapping ? 'bg-mint-tonic/10 text-mint-tonic border-mint-tonic/20' : 'bg-lavender-mist/10 text-lavender-mist border-lavender-mist/20'} border`}
+                                        whileHover={{ rotate: 15, scale: 1.1 }}
+                                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                                    >
+                                        {mangaMapping ? (
+                                            <BookOpenIcon size={20} />
+                                        ) : (
+                                            <SearchIcon size={20} />
+                                        )}
+                                    </motion.div>
+
+                                    {/* Text */}
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className={`font-mono text-[10px] uppercase tracking-widest ${mangaMapping ? 'text-mint-tonic' : 'text-lavender-mist'} font-bold`}>
+                                            {mangaMapping ? 'CONTINUE READING' : 'SEARCH THIS MANGA'}
+                                        </span>
+                                        <motion.span
+                                            className="font-bold text-white text-lg truncate max-w-[200px] md:max-w-[300px]"
+                                            whileHover={{ color: mangaMapping ? '#A0E9E5' : '#B4A2F6', x: 2 }}
+                                        >
+                                            {mangaMapping ? mangaMapping.sourceTitle : 'Browse Extensions'}
+                                        </motion.span>
+                                    </div>
+                                </div>
+
+                                {/* Arrow */}
+                                <motion.div
+                                    className="flex h-8 w-8 items-center justify-center rounded-full border border-white/5 bg-white/5 text-white/40"
+                                    whileHover={{
+                                        backgroundColor: mangaMapping ? '#A0E9E5' : '#B4A2F6',
+                                        color: '#121214',
+                                        borderColor: mangaMapping ? '#A0E9E5' : '#B4A2F6',
+                                        x: 5
+                                    }}
+                                >
+                                    <ArrowRightIcon size={16} />
+                                </motion.div>
+                            </div>
+                        </motion.button>
+                    </div>
+
+                </div>
+                <div className="max-w-[1400px] mx-auto px-6 md:px-10 -mt-6">
+                    <MediaRelations relations={manga.relations} />
+                </div>
+
+                {/* Alternative Titles */}
+                <div className="mt-10 mb-8 border-t border-white/10 pt-8 max-w-[1400px] mx-auto px-6 md:px-10">
+                    <h3 className="text-sm font-mono text-white/40 uppercase tracking-widest mb-4">Alternative Titles</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {manga.title?.romaji && (
+                            <div>
+                                <span className="text-xs text-lavender-mist/70 block mb-1">Romaji</span>
+                                <span className="text-white/80 font-medium">{manga.title.romaji}</span>
+                            </div>
+                        )}
+                        {manga.title?.english && (
+                            <div>
+                                <span className="text-xs text-lavender-mist/70 block mb-1">English</span>
+                                <span className="text-white/80 font-medium">{manga.title.english}</span>
+                            </div>
+                        )}
+                        {manga.title?.native && (
+                            <div>
+                                <span className="text-xs text-lavender-mist/70 block mb-1">Native</span>
+                                <span className="text-white/80 font-medium font-jp">{manga.title.native}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -536,7 +640,7 @@ function MangaDetails() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }
 
